@@ -23,7 +23,7 @@ class UAnimSequence;
 class UCurveVector;
 
 /**
- * Main anim instance class for character
+ * Main anim instance class for character.
  */
 UCLASS(Blueprintable, BlueprintType)
 class ALSV4_CPP_API UALSCharacterAnimInstance : public UAnimInstance

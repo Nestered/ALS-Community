@@ -377,6 +377,15 @@ void UALSMantleComponent::MantleUpdate(float BlendIn)
 
 	// Step 4: Set the actors location and rotation to the Lerped Target.
 	OwnerCharacter->SetActorLocationAndTargetRotation(LerpedTarget.GetLocation(), LerpedTarget.GetRotation().Rotator());
+	// Tim Setting yaw control rotation from TargetTransform so character faces forwards when mantle completes.
+	AController* Controller = Cast<AController>(OwnerCharacter->GetController());
+	if (Controller)
+	{
+		// Tim Correcting from -180 to 180 LerpedTarget.GetRotation().Rotator().Yaw to 0 to 360 for ControlRotation.
+		float CorrectedYaw = LerpedTarget.GetRotation().Rotator().Yaw < 0.f ? LerpedTarget.GetRotation().Rotator().Yaw + 360.f : LerpedTarget.GetRotation().Rotator().Yaw;
+		//UE_LOG(LogTemp, Warning, TEXT("MantleUpdate: %f"), float(CorrectedYaw));
+		Controller->SetControlRotation(FRotator(Controller->GetControlRotation().Pitch, CorrectedYaw, Controller->GetControlRotation().Roll));
+	}
 }
 
 void UALSMantleComponent::MantleEnd()

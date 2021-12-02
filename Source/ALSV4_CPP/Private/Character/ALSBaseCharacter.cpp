@@ -22,6 +22,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "Math/UnrealMathUtility.h"
 #include "Net/UnrealNetwork.h"
 
 
@@ -182,7 +183,7 @@ void AALSBaseCharacter::SetAimYawRate(float NewAimYawRate)
 void AALSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 	// Set required values
 	SetEssentialValues(DeltaTime);
 
@@ -551,6 +552,7 @@ FALSMovementSettings AALSBaseCharacter::GetTargetMovementSettings() const
 {
 	if (RotationMode == EALSRotationMode::VelocityDirection)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("RotationMode == EALSRotationMode::VelocityDirection"));
 		if (Stance == EALSStance::Standing)
 		{
 			return MovementData.VelocityDirection.Standing;
@@ -562,6 +564,7 @@ FALSMovementSettings AALSBaseCharacter::GetTargetMovementSettings() const
 	}
 	else if (RotationMode == EALSRotationMode::LookingDirection)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("RotationMode == EALSRotationMode::LookingDirection"));
 		if (Stance == EALSStance::Standing)
 		{
 			return MovementData.LookingDirection.Standing;
@@ -573,6 +576,7 @@ FALSMovementSettings AALSBaseCharacter::GetTargetMovementSettings() const
 	}
 	else if (RotationMode == EALSRotationMode::Aiming)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("RotationMode == EALSRotationMode::Aiming"));
 		if (Stance == EALSStance::Standing)
 		{
 			return MovementData.Aiming.Standing;
@@ -909,7 +913,7 @@ void AALSBaseCharacter::OnRotationModeChanged(EALSRotationMode PreviousRotationM
 void AALSBaseCharacter::OnGaitChanged(const EALSGait PreviousGait)
 {
 	MainAnimInstance->Gait = Gait;
-
+	
 	if (CameraBehavior)
 	{
 		CameraBehavior->Gait = Gait;
@@ -1093,15 +1097,17 @@ void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
 {
 	if (MovementAction == EALSMovementAction::None)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("UpdateGroundedRotation : MovementAction == EALSMovementAction::None"));
 		const bool bCanUpdateMovingRot = ((bIsMoving && bHasMovementInput) || Speed > 150.0f) && !HasAnyRootMotion();
 		if (bCanUpdateMovingRot)
 		{
 			const float GroundedRotationRate = CalculateGroundedRotationRate();
 			if (RotationMode == EALSRotationMode::VelocityDirection)
 			{
+				//UE_LOG(LogTemp, Warning, TEXT("EALSRotationMode::VelocityDirection"));
 				// Velocity Direction Rotation
-				SmoothCharacterRotation({0.0f, LastVelocityRotation.Yaw, 0.0f}, 800.0f, GroundedRotationRate,
-				                        DeltaTime);
+				SmoothCharacterRotation({ 0.0f, LastVelocityRotation.Yaw, 0.0f }, 800.0f, GroundedRotationRate,
+					DeltaTime);
 			}
 			else if (RotationMode == EALSRotationMode::LookingDirection)
 			{
@@ -1109,63 +1115,67 @@ void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
 				float YawValue;
 				if (Gait == EALSGait::Sprinting)
 				{
+					//UE_LOG(LogTemp, Warning, TEXT("EALSGait::Sprinting"));
 					YawValue = LastVelocityRotation.Yaw;
 				}
 				else
 				{
+					//UE_LOG(LogTemp, Warning, TEXT("EALSGait::Sprinting Else"));
 					// Walking or Running..
 					const float YawOffsetCurveVal = MainAnimInstance->GetCurveValue(NAME_YawOffset);
 					YawValue = AimingRotation.Yaw + YawOffsetCurveVal;
 				}
-				SmoothCharacterRotation({0.0f, YawValue, 0.0f}, 500.0f, GroundedRotationRate, DeltaTime);
+				SmoothCharacterRotation({ 0.0f, YawValue, 0.0f }, 500.0f, GroundedRotationRate, DeltaTime);
 			}
 			else if (RotationMode == EALSRotationMode::Aiming)
 			{
 				const float ControlYaw = AimingRotation.Yaw;
-				SmoothCharacterRotation({0.0f, ControlYaw, 0.0f}, 1000.0f, 20.0f, DeltaTime);
+				//UE_LOG(LogTemp, Warning, TEXT("EALSRotationMode::Aiming %f"), float(AimingRotation.Yaw));
+				SmoothCharacterRotation({ 0.0f, ControlYaw, 0.0f }, 1000.0f, 20.0f, DeltaTime);
 			}
 		}
 		else
 		{
 			// Not Moving
 
-			if ((ViewMode == EALSViewMode::ThirdPerson && RotationMode == EALSRotationMode::Aiming) ||
-				ViewMode == EALSViewMode::FirstPerson)
-			{
-				LimitRotation(-100.0f, 100.0f, 20.0f, DeltaTime);
-			}
+			// Tim I want rotation limited by default, not dependant on ViewMode, aiming etc.
+			//if ((ViewMode == EALSViewMode::ThirdPerson && RotationMode == EALSRotationMode::Aiming) || ViewMode == EALSViewMode::FirstPerson)
+			//{
+			LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
+			//}
 
+			// Tim Commented as I just want LimitRotation so the player clearly see's the direction they are facing at all times.
 			// Apply the RotationAmount curve from Turn In Place Animations.
 			// The Rotation Amount curve defines how much rotation should be applied each frame,
 			// and is calculated for animations that are animated at 30fps.
 
-			const float RotAmountCurve = MainAnimInstance->GetCurveValue(NAME_RotationAmount);
+			//const float RotAmountCurve = MainAnimInstance->GetCurveValue(NAME_RotationAmount);
 
-			if (FMath::Abs(RotAmountCurve) > 0.001f)
-			{
-				if (GetLocalRole() == ROLE_AutonomousProxy)
-				{
-					TargetRotation.Yaw = UKismetMathLibrary::NormalizeAxis(
-						TargetRotation.Yaw + (RotAmountCurve * (DeltaTime / (1.0f / 30.0f))));
-					SetActorRotation(TargetRotation);
-				}
-				else
-				{
-					AddActorWorldRotation({0, RotAmountCurve * (DeltaTime / (1.0f / 30.0f)), 0});
-				}
-				TargetRotation = GetActorRotation();
-			}
+			//if (FMath::Abs(RotAmountCurve) > 0.001f)
+			//{
+			//	if (GetLocalRole() == ROLE_AutonomousProxy)
+			//	{
+			//		TargetRotation.Yaw = UKismetMathLibrary::NormalizeAxis(TargetRotation.Yaw + (RotAmountCurve * (DeltaTime / (1.0f / 30.0f))));
+			//		SetActorRotation(TargetRotation);
+			//	}
+			//	else
+			//	{
+			//		//UE_LOG(LogTemp, Warning, TEXT("GetLocalRole() == ROLE_AutonomousProxy"));
+			//		AddActorWorldRotation({0, RotAmountCurve * (DeltaTime / (1.0f / 30.0f)), 0});
+			//	}
+			//	TargetRotation = GetActorRotation();
+			//}
 		}
 	}
 	else if (MovementAction == EALSMovementAction::Rolling)
 	{
+		// Tim commented as not needed.
 		// Rolling Rotation (Not allowed on networked games)
-		if (!bEnableNetworkOptimizations && bHasMovementInput)
+		/*if (!bEnableNetworkOptimizations && bHasMovementInput)
 		{
 			SmoothCharacterRotation({0.0f, LastMovementInputRotation.Yaw, 0.0f}, 0.0f, 2.0f, DeltaTime);
-		}
+		}*/
 	}
-
 	// Other actions are ignored...
 }
 
@@ -1238,14 +1248,11 @@ EALSGait AALSBaseCharacter::GetActualGait(EALSGait AllowedGait) const
 	return EALSGait::Walking;
 }
 
-void AALSBaseCharacter::SmoothCharacterRotation(FRotator Target, float TargetInterpSpeed, float ActorInterpSpeed,
-                                                float DeltaTime)
+void AALSBaseCharacter::SmoothCharacterRotation(FRotator Target, float TargetInterpSpeed, float ActorInterpSpeed, float DeltaTime)
 {
 	// Interpolate the Target Rotation for extra smooth rotation behavior
-	TargetRotation =
-		FMath::RInterpConstantTo(TargetRotation, Target, DeltaTime, TargetInterpSpeed);
-	SetActorRotation(
-		FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, ActorInterpSpeed));
+	TargetRotation = FMath::RInterpConstantTo(TargetRotation, Target, DeltaTime, TargetInterpSpeed);
+	SetActorRotation(FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, ActorInterpSpeed));
 }
 
 float AALSBaseCharacter::CalculateGroundedRotationRate() const
@@ -1255,9 +1262,8 @@ float AALSBaseCharacter::CalculateGroundedRotationRate() const
 	// rates for each speed. Increase the speed if the camera is rotating quickly for more responsive rotation.
 
 	const float MappedSpeedVal = MyCharacterMovementComponent->GetMappedSpeed();
-	const float CurveVal =
-		MyCharacterMovementComponent->CurrentMovementSettings.RotationRateCurve->GetFloatValue(MappedSpeedVal);
-	const float ClampedAimYawRate = FMath::GetMappedRangeValueClamped({0.0f, 300.0f}, {1.0f, 3.0f}, AimYawRate);
+	const float CurveVal = MyCharacterMovementComponent->CurrentMovementSettings.RotationRateCurve->GetFloatValue(MappedSpeedVal);
+	const float ClampedAimYawRate = FMath::GetMappedRangeValueClamped({0.0f, 300.0f}, {1.0f, 3.0f}, AimYawRate); // 300.f
 	return CurveVal * ClampedAimYawRate;
 }
 
@@ -1316,12 +1322,21 @@ void AALSBaseCharacter::PlayerRightMovementInput(float Value)
 
 void AALSBaseCharacter::PlayerCameraUpInput(float Value)
 {
-	AddControllerPitchInput(LookUpDownRate * Value);
+	// Tim No need for pitch input.
+	//AddControllerPitchInput(LookUpDownRate * Value);
 }
 
 void AALSBaseCharacter::PlayerCameraRightInput(float Value)
 {
-	AddControllerYawInput(LookLeftRightRate * Value);
+	// Tim only allowing input if we are not mantling. Better location to put this, seems extreme to ignore all input.
+	if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::None)
+	{
+		if (MovementAction == EALSMovementAction::None || MovementAction == EALSMovementAction::Rolling)
+		{
+			// Tim clamping Yaw input for now as TurnInPlace can easily overshoot and trigger turn 180 degrees.
+			AddControllerYawInput(LookLeftRightRate * FMath::Clamp(Value, -.9f, .9f));
+		}
+	}
 }
 
 void AALSBaseCharacter::JumpPressedAction()
@@ -1360,12 +1375,14 @@ void AALSBaseCharacter::JumpReleasedAction()
 
 void AALSBaseCharacter::SprintPressedAction()
 {
+	// Store gait for coming out of sprinting.
+	SetStoredGait(Gait);
 	SetDesiredGait(EALSGait::Sprinting);
 }
 
 void AALSBaseCharacter::SprintReleasedAction()
 {
-	SetDesiredGait(EALSGait::Running);
+	SetDesiredGait(GetStoredGait());
 }
 
 void AALSBaseCharacter::AimPressedAction()
