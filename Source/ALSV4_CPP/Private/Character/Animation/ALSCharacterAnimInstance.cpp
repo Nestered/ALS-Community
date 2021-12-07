@@ -41,6 +41,7 @@ static const FName NAME_Mask_LandPrediction(TEXT("Mask_LandPrediction"));
 static const FName NAME__ALSCharacterAnimInstance__RotationAmount(TEXT("RotationAmount"));
 static const FName NAME_VB___foot_target_l(TEXT("VB foot_target_l"));
 static const FName NAME_VB___foot_target_r(TEXT("VB foot_target_r"));
+static const FName NAME_VB___ik_foot_l(TEXT("VB ik_foot_l"));
 static const FName NAME_W_Gait(TEXT("W_Gait"));
 static const FName NAME__ALSCharacterAnimInstance__root(TEXT("root"));
 
@@ -576,8 +577,8 @@ void UALSCharacterAnimInstance::DynamicTransitionCheck()
 	// The currently set transition plays the second half of a 2 foot transition animation, so that only a single foot moves.
 	// Because only the IK_Foot bone can be locked, the separate virtual bone allows the system to know its desired location when locked.
 	FTransform SocketTransformA = GetOwningComponent()->GetSocketTransform(IkFootL_BoneName, RTS_Component);
-	FTransform SocketTransformB = GetOwningComponent()->GetSocketTransform(
-		NAME_VB___foot_target_l, RTS_Component);
+	FString SocketName = IkFootL_BoneName.ToString();
+	FTransform SocketTransformB = GetOwningComponent()->GetSocketTransform(NAME_VB___foot_target_l, RTS_Component);
 	float Distance = (SocketTransformB.GetLocation() - SocketTransformA.GetLocation()).Size();
 	if (Distance > Config.DynamicTransitionThreshold)
 	{
