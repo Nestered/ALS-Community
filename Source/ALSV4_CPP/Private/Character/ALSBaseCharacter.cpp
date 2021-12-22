@@ -53,6 +53,8 @@ void AALSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("MoveRight/Left", this, &AALSBaseCharacter::PlayerRightMovementInput);
 	PlayerInputComponent->BindAxis("LookUp/Down", this, &AALSBaseCharacter::PlayerCameraUpInput);
 	PlayerInputComponent->BindAxis("LookLeft/Right", this, &AALSBaseCharacter::PlayerCameraRightInput);
+	PlayerInputComponent->BindAction("AttackAction", IE_Pressed, this, &AALSBaseCharacter::AttackPressedAction);
+	PlayerInputComponent->BindAction("AttackAction", IE_Released, this, &AALSBaseCharacter::AttackReleasedAction);
 	PlayerInputComponent->BindAction("JumpAction", IE_Pressed, this, &AALSBaseCharacter::JumpPressedAction);
 	PlayerInputComponent->BindAction("JumpAction", IE_Released, this, &AALSBaseCharacter::JumpReleasedAction);
 	PlayerInputComponent->BindAction("StanceAction", IE_Pressed, this, &AALSBaseCharacter::StancePressedAction);
@@ -126,6 +128,7 @@ void AALSBaseCharacter::BeginPlay()
 	MainAnimInstance->RotationMode = DesiredRotationMode;
 	AnimData.ViewMode = ViewMode;
 	MainAnimInstance->OverlayState = OverlayState;
+	MainAnimInstance->AttackState = AttackState;
 	AnimData.PrevMovementState = PrevMovementState;
 	MainAnimInstance->MovementState = MovementState;
 
@@ -158,6 +161,20 @@ void AALSBaseCharacter::BeginPlay()
 	MyCharacterMovementComponent->SetMovementSettings(GetTargetMovementSettings());
 
 	ALSDebugComponent = FindComponentByClass<UALSDebugComponent>();
+
+	AttackTimerDelegate.BindLambda([&]()
+	{
+		AttackState = EALSAttackState::Resting;
+		MainAnimInstance->AttackState = AttackState;
+		GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+		UE_LOG(LogTemp, Warning, TEXT("AttackTimerDelegate."));
+	});
+	AttackStateTimerDelegate.BindLambda([&]()
+	{
+		SetRotationMode(EALSRotationMode::Aiming);
+		GetWorld()->GetTimerManager().ClearTimer(AttackStateTimerHandle);
+		UE_LOG(LogTemp, Warning, TEXT("AttackStateTimerDelegate: SetRotationMode(EALSRotationMode::Aiming);"));
+	});
 }
 
 void AALSBaseCharacter::PreInitializeComponents()
@@ -184,6 +201,15 @@ void AALSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	/*GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Hands tied?: %f"), float(GetMainAnimInstance()->OverlayState.HandsTied())));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("BasePose_N: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().BasePose_N)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("BasePose_CLF: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().BasePose_CLF)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("EnableHandIK_L: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().EnableHandIK_L)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("EnableHandIK_R: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().EnableHandIK_R)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("OverlayOverrideState: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().OverlayOverrideState)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Arm_R_Add: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().Arm_R_Add)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Arm_L_Add: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().Arm_L_Add)));*/
+	
 	// Set required values
 	SetEssentialValues(DeltaTime);
 
@@ -204,6 +230,15 @@ void AALSBaseCharacter::Tick(float DeltaTime)
 	// Cache values
 	PreviousVelocity = GetVelocity();
 	PreviousAimYaw = AimingRotation.Yaw;
+
+	/*if (GetLocalRole() == ROLE_Authority)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Authority: AimingRotation.Yaw: %f"), float(AimingRotation.Yaw)));
+	}
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("Client: AimingRotation.Yaw: %f"), float(AimingRotation.Yaw)));
+	}*/
 }
 
 void AALSBaseCharacter::RagdollStart()
@@ -445,6 +480,22 @@ void AALSBaseCharacter::SetOverlayState(const EALSOverlayState NewState)
 void AALSBaseCharacter::Server_SetOverlayState_Implementation(EALSOverlayState NewState)
 {
 	SetOverlayState(NewState);
+}
+
+void AALSBaseCharacter::SetAttackState(EALSAttackState NewState)
+{
+
+	if (AttackState != NewState)
+	{
+		const EALSAttackState Prev = AttackState;
+		AttackState = NewState;
+		OnAttackStateChanged(Prev);
+
+		/*if (GetLocalRole() == ROLE_AutonomousProxy)
+		{
+			Server_SetOverlayState(NewState);
+		}*/
+	}
 }
 
 void AALSBaseCharacter::EventOnLanded()
@@ -948,6 +999,11 @@ void AALSBaseCharacter::OnOverlayStateChanged(const EALSOverlayState PreviousSta
 	MainAnimInstance->OverlayState = OverlayState;
 }
 
+void AALSBaseCharacter::OnAttackStateChanged(EALSAttackState PreviousState)
+{
+	MainAnimInstance->AttackState = AttackState;
+}
+
 void AALSBaseCharacter::OnVisibleMeshChanged(const USkeletalMesh* PrevVisibleMesh)
 {
 	// Update the Skeletal Mesh before we update materials and anim bp variables
@@ -1095,12 +1151,22 @@ void AALSBaseCharacter::UpdateCharacterMovement()
 
 void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("UpdateGroundedRotation:")));
 	if (MovementAction == EALSMovementAction::None)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("UpdateGroundedRotation : MovementAction == EALSMovementAction::None"));
 		const bool bCanUpdateMovingRot = ((bIsMoving && bHasMovementInput) || Speed > 150.0f) && !HasAnyRootMotion();
+		/*if (GetLocalRole() == ROLE_Authority)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Authority: bCanUpdateMovingRot: %f"), float(bCanUpdateMovingRot)));
+		}
+		if (GetLocalRole() < ROLE_Authority)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("Client: bCanUpdateMovingRot: %f"), float(bCanUpdateMovingRot)));
+		}*/
 		if (bCanUpdateMovingRot)
 		{
+			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("bCanUpdateMovingRot:")));
 			const float GroundedRotationRate = CalculateGroundedRotationRate();
 			if (RotationMode == EALSRotationMode::VelocityDirection)
 			{
@@ -1136,12 +1202,41 @@ void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
 		}
 		else
 		{
+			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("!!!!bCanUpdateMovingRot:")));
+			
+			// Tim I want rotation limited by default, not dependent on ViewMode, aiming etc.
+			// Limit rotation set to minimum of total angle of 90 degrees as TurnInPlace can rotate character 90 degrees resulting
+			// in 'overshoot' and a ping pong effect, Luckily 90 degrees is ok.
+			LimitRotation(-35.0f, 35.0f, 20.0f, DeltaTime); // LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
+
+			// Apply the RotationAmount curve from Turn In Place Animations.
+			// The Rotation Amount curve defines how much rotation should be applied each frame,
+			// and is calculated for animations that are animated at 30fps.
+
+			const float RotAmountCurve = MainAnimInstance ? MainAnimInstance->GetCurveValue(NAME_RotationAmount) : 0.f;
+
+			if (FMath::Abs(RotAmountCurve) > 0.001f)
+			{
+				if (GetLocalRole() == ROLE_AutonomousProxy)
+				{
+					TargetRotation.Yaw = UKismetMathLibrary::NormalizeAxis(TargetRotation.Yaw + (RotAmountCurve * (DeltaTime / (1.0f / 30.0f))));
+					SetActorRotation(TargetRotation);
+				}
+				else
+				{
+					AddActorWorldRotation({ 0, RotAmountCurve * (DeltaTime / (1.0f / 30.0f)), 0 });
+				}
+				TargetRotation = GetActorRotation();
+			}
+			
 			// Not Moving
 
 			// Tim I want rotation limited by default, not dependant on ViewMode, aiming etc.
 			//if ((ViewMode == EALSViewMode::ThirdPerson && RotationMode == EALSRotationMode::Aiming) || ViewMode == EALSViewMode::FirstPerson)
 			//{
-			LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
+			//
+				//LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
+			
 			//}
 
 			// Tim Commented as I just want LimitRotation so the player clearly see's the direction they are facing at all times.
@@ -1273,7 +1368,7 @@ void AALSBaseCharacter::LimitRotation(float AimYawMin, float AimYawMax, float In
 	FRotator Delta = AimingRotation - GetActorRotation();
 	Delta.Normalize();
 	const float RangeVal = Delta.Yaw;
-
+	
 	if (RangeVal < AimYawMin || RangeVal > AimYawMax)
 	{
 		const float ControlRotYaw = AimingRotation.Yaw;
@@ -1287,6 +1382,11 @@ void AALSBaseCharacter::GetControlForwardRightVector(FVector& Forward, FVector& 
 	const FRotator ControlRot(0.0f, AimingRotation.Yaw, 0.0f);
 	Forward = GetInputAxisValue("MoveForward/Backwards") * UKismetMathLibrary::GetForwardVector(ControlRot);
 	Right = GetInputAxisValue("MoveRight/Left") * UKismetMathLibrary::GetRightVector(ControlRot);
+}
+
+void AALSBaseCharacter::SetAttackingTimer(float Time)
+{
+	GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, AttackTimerDelegate, Time, false);
 }
 
 FVector AALSBaseCharacter::GetPlayerMovementInput() const
@@ -1328,7 +1428,7 @@ void AALSBaseCharacter::PlayerCameraUpInput(float Value)
 
 void AALSBaseCharacter::PlayerCameraRightInput(float Value)
 {
-	// Tim only allowing input if we are not mantling. Better location to put this, seems extreme to ignore all input.
+	// Tim only allowing input if we are not mantling. Better location to put this? Seems extreme to ignore all input.
 	if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::None)
 	{
 		if (MovementAction == EALSMovementAction::None || MovementAction == EALSMovementAction::Rolling)
@@ -1336,6 +1436,46 @@ void AALSBaseCharacter::PlayerCameraRightInput(float Value)
 			// Tim clamping Yaw input for now as TurnInPlace can easily overshoot and trigger turn 180 degrees.
 			AddControllerYawInput(LookLeftRightRate * FMath::Clamp(Value, -.9f, .9f));
 		}
+	}
+}
+
+void AALSBaseCharacter::AttackPressedAction()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("AttackPressedAction"));
+	if (MovementAction == EALSMovementAction::None)
+	{
+		if (GetGait() == EALSGait::Walking || GetGait() == EALSGait::Running)
+		{
+			// Only allow attack if standing, will add check for melee/ranged weapon when equipment implemented.
+			if(AttackState == EALSAttackState::Resting && Stance == EALSStance::Standing && GetRotationMode() == EALSRotationMode::Aiming)
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("SetOverlayState(EALSOverlayState::MeleeUnarmed);"));
+				//SetOverlayState(EALSOverlayState::MeleeUnarmed);
+				SetAttackState(EALSAttackState::Attacking);
+				/*AttackState = EALSAttackState::Attacking;
+				MainAnimInstance->AttackState = AttackState;*/
+				// Set timer for spam attack button.
+				//MovementAction == EALSMovementAction::Attacking;
+				//Replicated_PlayMontage(GetAttackAnimation(), 1.35f);
+			}
+		}
+	}
+}
+
+void AALSBaseCharacter::AttackReleasedAction()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("SetOverlayState(EALSOverlayState::Default);"));
+	//SetOverlayState(EALSOverlayState::Default);
+	//AttackState = EALSAttackState::Reloading;
+	//MainAnimInstance->AttackState = AttackState;
+	if (!AttackTimerHandle.IsValid())
+	{
+		//GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, AttackTimerDelegate, .2f, false);
+		//UE_LOG(LogTemp, Warning, TEXT("AttackReleasedAction"));
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("Timer still valid."));
 	}
 }
 
@@ -1388,7 +1528,10 @@ void AALSBaseCharacter::SprintReleasedAction()
 void AALSBaseCharacter::AimPressedAction()
 {
 	// AimAction: Hold "AimAction" to enter the aiming mode, release to revert back the desired rotation mode.
-	SetRotationMode(EALSRotationMode::Aiming);
+	SetOverlayState(EALSOverlayState::MeleeUnarmed);
+	// Setting SetOverlayState(EALSOverlayState::MeleeUnarmed) and SetRotationMode(EALSRotationMode::Aiming)
+	// causes occasional odd shift forward of animman. Delaying the two state changes stops this unwanted behaviour.
+	GetWorld()->GetTimerManager().SetTimer(AttackStateTimerHandle, AttackStateTimerDelegate, .0001f, false);
 }
 
 void AALSBaseCharacter::AimReleasedAction()
@@ -1396,6 +1539,7 @@ void AALSBaseCharacter::AimReleasedAction()
 	if (ViewMode == EALSViewMode::ThirdPerson)
 	{
 		SetRotationMode(DesiredRotationMode);
+		SetOverlayState(EALSOverlayState::Default);
 	}
 	else if (ViewMode == EALSViewMode::FirstPerson)
 	{
@@ -1574,4 +1718,8 @@ void AALSBaseCharacter::OnRep_OverlayState(EALSOverlayState PrevOverlayState)
 void AALSBaseCharacter::OnRep_VisibleMesh(USkeletalMesh* NewVisibleMesh)
 {
 	OnVisibleMeshChanged(NewVisibleMesh);
+}
+
+void AALSBaseCharacter::CallBlueprintDebugPrint_Implementation(FVector Vector)
+{
 }

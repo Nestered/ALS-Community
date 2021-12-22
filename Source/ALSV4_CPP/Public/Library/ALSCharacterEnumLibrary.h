@@ -80,7 +80,8 @@ enum class EALSOverlayState : uint8
 	Torch,
 	Binoculars,
 	Box,
-	Barrel
+	Barrel,
+	MeleeUnarmed
 };
 
 /**
@@ -171,4 +172,13 @@ enum class EALSSpawnType : uint8
 {
 	Location,
 	Attached
+};
+
+UENUM(BlueprintType)
+enum class EALSAttackState : uint8
+{
+	Resting,
+	Attacking,
+	Reloading,
+	RecentlyAttacked
 };

@@ -46,6 +46,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ALS|Animation")
 	void PlayDynamicTransition(float ReTriggerDelay, FALSDynamicMontageParams Parameters);
 
+	UFUNCTION(BlueprintNativeEvent, Category = "ALS|Animation")
+	void CallBlueprintPlayTransition(const FALSDynamicMontageParams& Parameters);
+
+	UFUNCTION(BlueprintCallable, Category = "ALS|Animation")
+	void PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters);
+	
 	UFUNCTION(BlueprintCallable, Category = "ALS|Event")
 	void OnJumped();
 
@@ -203,6 +209,9 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Character Information")
 	FALSOverlayState OverlayState = EALSOverlayState::Default;
 
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Character Information")
+	FALSAttackState AttackState = EALSAttackState::Resting;
+
 protected:
 	/** Anim Graph - Grounded */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Grounded", Meta = (
@@ -240,6 +249,9 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Aiming Values")
 	FVector2D SmoothedAimingAngle = FVector2D::ZeroVector;
 
+	UFUNCTION(BlueprintCallable, Category = "TimTest")
+	FALSAnimGraphLayerBlending GetLayerBlendingValues() { return LayerBlendingValues; }
+	
 protected:
 	/** Anim Graph - Ragdoll */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Ragdoll")
@@ -251,7 +263,7 @@ protected:
 	FALSAnimGraphLayerBlending LayerBlendingValues;
 
 	/** Anim Graph - Foot IK */
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Foot IK", Meta = (
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "Read Only Data|Anim Graph - Foot IK", Meta = (
 		ShowOnlyInnerProperties))
 	FALSAnimGraphFootIK FootIKValues;
 

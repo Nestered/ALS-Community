@@ -232,7 +232,6 @@ public:
 		LowMantle_ = Action == EALSMovementAction::LowMantle;
 		HighMantle_ = Action == EALSMovementAction::HighMantle;
 		Rolling_ = Action == EALSMovementAction::Rolling;
-		GettingUp_ = Action == EALSMovementAction::GettingUp;
 	}
 };
 
@@ -324,6 +323,9 @@ private:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Character States")
 	bool Barrel_ = false;
 
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Character States")
+	bool MeleeUnarmed_ = false;
+
 public:
 	FALSOverlayState()
 	{
@@ -344,6 +346,7 @@ public:
 	const bool& Binoculars() const { return Binoculars_; }
 	const bool& Box() const { return Box_; }
 	const bool& Barrel() const { return Barrel_; }
+	const bool& MeleeUnarmed() const { return MeleeUnarmed_; }
 
 	operator EALSOverlayState() const { return State; }
 
@@ -363,6 +366,7 @@ public:
 		Binoculars_ = State == EALSOverlayState::Binoculars;
 		Box_ = State == EALSOverlayState::Box;
 		Barrel_ = State == EALSOverlayState::Barrel;
+		MeleeUnarmed_ = State == EALSOverlayState::MeleeUnarmed;
 	}
 };
 
@@ -398,5 +402,50 @@ public:
 		State = NewState;
 		None_ = State == EALSGroundedEntryState::None;
 		Roll_ = State == EALSGroundedEntryState::Roll;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FALSAttackState
+{
+	GENERATED_BODY()
+
+private:
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Attack System")
+	EALSAttackState State = EALSAttackState::Resting;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Attack System")
+	bool Resting_ = true;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Attack System")
+	bool Attacking_ = false;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Attack System")
+	bool Reloading_ = false;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Attack System")
+	bool RecentlyAttacked_ = false;
+
+public:
+	FALSAttackState()
+	{
+	}
+
+	FALSAttackState(const EALSAttackState InitialState) { *this = InitialState; }
+
+	const bool& Resting() const { return Resting_; }
+	const bool& Attacking() const { return Attacking_; }
+	const bool& Reloading() const { return Reloading_; }
+	const bool& RecentlyAttacked() const { return RecentlyAttacked_; }
+
+	operator EALSAttackState() const { return State; }
+
+	void operator=(const EALSAttackState NewState)
+	{
+		State = NewState;
+		Resting_ = State == EALSAttackState::Resting;
+		Attacking_ = State == EALSAttackState::Attacking;
+		Reloading_ = State == EALSAttackState::Reloading;
+		RecentlyAttacked_ = State == EALSAttackState::RecentlyAttacked;
 	}
 };

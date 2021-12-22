@@ -9,8 +9,8 @@
 #include "Character/Animation/ALSCharacterAnimInstance.h"
 #include "Character/ALSBaseCharacter.h"
 #include "Library/ALSMathLibrary.h"
+#include "Library/StaticBlueprintFunctionLibrary.h"
 #include "Components/ALSDebugComponent.h"
-
 #include "Curves/CurveVector.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -41,7 +41,7 @@ static const FName NAME_Mask_LandPrediction(TEXT("Mask_LandPrediction"));
 static const FName NAME__ALSCharacterAnimInstance__RotationAmount(TEXT("RotationAmount"));
 static const FName NAME_VB___foot_target_l(TEXT("VB foot_target_l"));
 static const FName NAME_VB___foot_target_r(TEXT("VB foot_target_r"));
-static const FName NAME_VB___ik_foot_l(TEXT("VB ik_foot_l"));
+//static const FName NAME_VB___ik_foot_l(TEXT("VB ik_foot_l"));
 static const FName NAME_W_Gait(TEXT("W_Gait"));
 static const FName NAME__ALSCharacterAnimInstance__root(TEXT("root"));
 
@@ -67,6 +67,9 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
+	//FString Name = FString("Grounded?: ");
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 3.f, -1, Character->GetLocalRole(), Name, float(MovementState.Grounded()));
+	
 	if (!Character)
 	{
 		// Fix character looking right on editor
@@ -115,25 +118,29 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		else
 		{
 			// Do While Not Moving
-			if (CanRotateInPlace())
-			{
-				RotateInPlaceCheck();
-			}
-			else
-			{
-				Grounded.bRotateL = false;
-				Grounded.bRotateR = false;
-			}
-			if (CanTurnInPlace())
+			//if (CanRotateInPlace())
+			//{
+			//	//UE_LOG(LogTemp, Warning, TEXT("CanRotateInPlace(): %f"), float(Grounded.RotateRate));
+			//	RotateInPlaceCheck();
+			//}
+			//else
+			//{
+			//	Grounded.bRotateL = false;
+			//	Grounded.bRotateR = false;
+			//}
+			// Tim Never TurnInPlace
+			/*if (CanTurnInPlace())
 			{
 				TurnInPlaceCheck(DeltaSeconds);
 			}
 			else
 			{
 				TurnInPlaceValues.ElapsedDelayTime = 0.0f;
-			}
+			}*/
 			if (CanDynamicTransition())
 			{
+				//FString Name = Montage->GetName();
+				//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 3.f, -1, FString("CanDynamicTransition()"), float(0.f));
 				DynamicTransitionCheck();
 			}
 		}
@@ -152,7 +159,7 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UALSCharacterAnimInstance::PlayTransition(const FALSDynamicMontageParams& Parameters)
 {
-	PlaySlotAnimationAsDynamicMontage(Parameters.Animation, NAME_Grounded___Slot,
+	UAnimMontage* Montage = PlaySlotAnimationAsDynamicMontage(Parameters.Animation, NAME_Grounded___Slot,
 	                                  Parameters.BlendInTime, Parameters.BlendOutTime, Parameters.PlayRate, 1,
 	                                  0.0f, Parameters.StartTime);
 }
@@ -172,7 +179,8 @@ void UALSCharacterAnimInstance::PlayDynamicTransition(float ReTriggerDelay, FALS
 		bCanPlayDynamicTransition = false;
 
 		// Play Dynamic Additive Transition Animation
-		PlayTransition(Parameters);
+		//PlayTransition(Parameters);
+		PlayTransitionBlueprint(Parameters);
 
 		UWorld* World = GetWorld();
 		check(World);
@@ -182,23 +190,36 @@ void UALSCharacterAnimInstance::PlayDynamicTransition(float ReTriggerDelay, FALS
 	}
 }
 
+void UALSCharacterAnimInstance::CallBlueprintPlayTransition_Implementation(const FALSDynamicMontageParams& Parameters)
+{
+}
+
+void UALSCharacterAnimInstance::PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters)
+{
+	// Play local transition.
+	PlayTransition(Parameters);
+	CallBlueprintPlayTransition(Parameters);
+}
+
 bool UALSCharacterAnimInstance::ShouldMoveCheck() const
 {
 	return (CharacterInformation.bIsMoving && CharacterInformation.bHasMovementInput) ||
 		CharacterInformation.Speed > 150.0f;
 }
 
+// Tim Always want to rotate in place.
 bool UALSCharacterAnimInstance::CanRotateInPlace() const
 {
-	return RotationMode.Aiming() ||
-		CharacterInformation.ViewMode == EALSViewMode::FirstPerson;
+	return true; // RotationMode.Aiming() ||
+		//CharacterInformation.ViewMode == EALSViewMode::FirstPerson;
 }
 
+// Tim never want to turn in place.
 bool UALSCharacterAnimInstance::CanTurnInPlace() const
 {
-	return RotationMode.LookingDirection() &&
-		CharacterInformation.ViewMode == EALSViewMode::ThirdPerson &&
-		GetCurveValue(NAME_Enable_Transition) >= 0.99f;
+	return false; //RotationMode.LookingDirection() &&
+		//CharacterInformation.ViewMode == EALSViewMode::ThirdPerson &&
+		//GetCurveValue(NAME_Enable_Transition) >= 0.99f;
 }
 
 bool UALSCharacterAnimInstance::CanDynamicTransition() const
@@ -294,10 +315,8 @@ void UALSCharacterAnimInstance::UpdateLayerValues()
 	LayerBlendingValues.Hand_R = GetCurveValue(NAME_Layering_Hand_R);
 	LayerBlendingValues.Hand_L = GetCurveValue(NAME_Layering_Hand_L);
 	// Blend and set the Hand IK weights to ensure they only are weighted if allowed by the Arm layers.
-	LayerBlendingValues.EnableHandIK_L = FMath::Lerp(0.0f, GetCurveValue(NAME_Enable_HandIK_L),
-	                                                 GetCurveValue(NAME_Layering_Arm_L));
-	LayerBlendingValues.EnableHandIK_R = FMath::Lerp(0.0f, GetCurveValue(NAME_Enable_HandIK_R),
-	                                                 GetCurveValue(NAME_Layering_Arm_R));
+	LayerBlendingValues.EnableHandIK_L = FMath::Lerp(0.0f, GetCurveValue(NAME_Enable_HandIK_L), GetCurveValue(NAME_Layering_Arm_L));
+	LayerBlendingValues.EnableHandIK_R = FMath::Lerp(0.0f, GetCurveValue(NAME_Enable_HandIK_R), GetCurveValue(NAME_Layering_Arm_R));
 	// Set whether the arms should blend in mesh space or local space.
 	// The Mesh space weight will always be 1 unless the Local Space (LS) curve is fully weighted.
 	LayerBlendingValues.Arm_L_LS = GetCurveValue(NAME_Layering_Arm_L_LS);
@@ -319,6 +338,8 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 	               IkFootR_BoneName, FootIKValues.FootLock_R_Alpha, FootIKValues.UseFootLockCurve_R,
 	               FootIKValues.FootLock_R_Location, FootIKValues.FootLock_R_Rotation);
 
+	Character->CallBlueprintDebugPrint(FootIKValues.FootLock_L_Location);
+	
 	if (MovementState.InAir())
 	{
 		// Reset IK Offsets if In Air
@@ -350,10 +371,10 @@ void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableF
 	// Step 1: Set Local FootLock Curve value
 	float FootLockCurveVal;
 
+	// Tim note can set speed of alpha here.
 	if (UseFootLockCurve)
 	{
-		UseFootLockCurve = FMath::Abs(GetCurveValue(NAME__ALSCharacterAnimInstance__RotationAmount)) <= 0.001f ||
-			Character->GetLocalRole() != ROLE_AutonomousProxy;
+	UseFootLockCurve = FMath::Abs(GetCurveValue(NAME__ALSCharacterAnimInstance__RotationAmount)) <= 0.001f || Character->GetLocalRole() == ROLE_AutonomousProxy;
 		FootLockCurveVal = GetCurveValue(FootLockCurve) * (1.f / GetSkelMeshComponent()->AnimUpdateRateParams->UpdateRate);
 	}
 	else
@@ -362,28 +383,35 @@ void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableF
 		FootLockCurveVal = 0.0f;
 	}
 
+	
 	// Step 2: Only update the FootLock Alpha if the new value is less than the current, or it equals 1. This makes it
 	// so that the foot can only blend out of the locked position or lock to a new position, and never blend in.
 	if (FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha)
 	{
+		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(1, Character->GetLocalRole(), FString("FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha"), float(FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha));
 		CurFootLockAlpha = FootLockCurveVal;
 	}
 
 	// Step 3: If the Foot Lock curve equals 1, save the new lock location and rotation in component space as the target.
 	if (CurFootLockAlpha >= 0.99f)
 	{
-		const FTransform& OwnerTransform =
-			GetOwningComponent()->GetSocketTransform(IKFootBone, RTS_Component);
+		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(3, Character->GetLocalRole(), FString("CurFootLockAlpha >= 0.99f"), float(CurFootLockAlpha >= 0.99f));
+		const FTransform& OwnerTransform = GetOwningComponent()->GetSocketTransform(IKFootBone, RTS_Component);
 		CurFootLockLoc = OwnerTransform.GetLocation();
 		CurFootLockRot = OwnerTransform.Rotator();
 	}
-
+	
 	// Step 4: If the Foot Lock Alpha has a weight,
 	// update the Foot Lock offsets to keep the foot planted in place while the capsule moves.
 	if (CurFootLockAlpha > 0.0f)
 	{
+		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(5, Character->GetLocalRole(), FString("CurFootLockAlpha > 0.0f"), float(CurFootLockAlpha > 0.0f));
 		SetFootLockOffsets(DeltaSeconds, CurFootLockLoc, CurFootLockRot);
 	}
+	//Character->CallBlueprintDebugPrint(CurFootLockLoc);
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(9, Character->GetLocalRole(), FString("CurFootLockLoc.X"), float(CurFootLockLoc.X));
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(11, Character->GetLocalRole(), FString("CurFootLockLoc.Y"), float(CurFootLockLoc.Y));
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(13, Character->GetLocalRole(), FString("CurFootLockLoc.Z"), float(CurFootLockLoc.Z));
 }
 
 void UALSCharacterAnimInstance::SetFootLockOffsets(float DeltaSeconds, FVector& LocalLoc, FRotator& LocalRot)
@@ -393,22 +421,26 @@ void UALSCharacterAnimInstance::SetFootLockOffsets(float DeltaSeconds, FVector& 
 	// to remain planted on the ground.
 	if (Character->GetCharacterMovement()->IsMovingOnGround())
 	{
-		RotationDifference = CharacterInformation.CharacterActorRotation - Character->GetCharacterMovement()->
-			GetLastUpdateRotation();
+		RotationDifference = CharacterInformation.CharacterActorRotation - Character->GetCharacterMovement()->GetLastUpdateRotation();
 		RotationDifference.Normalize();
 	}
 
 	// Get the distance traveled between frames relative to the mesh rotation
 	// to find how much the foot should be offset to remain planted on the ground.
-	const FVector& LocationDifference = GetOwningComponent()->GetComponentRotation().UnrotateVector(
-		CharacterInformation.Velocity * DeltaSeconds);
+	const FVector& LocationDifference = GetOwningComponent()->GetComponentRotation().UnrotateVector(CharacterInformation.Velocity * DeltaSeconds);
 
+	// Tim On Standalone and ListenServer footsteps are fine but on DedicatedServer Clients, LocationDifference &
+	// RotationDifference appear to be twice the value they should be. So halving value on DedicatedServer Clients.
+	bool const bIsStandAloneListenServer = Character->IsLocallyControlled() && Character->GetLocalRole() == ROLE_Authority;
+	
 	// Subtract the location difference from the current local location and rotate
 	// it by the rotation difference to keep the foot planted in component space.
-	LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw, FVector::DownVector);
+	bIsStandAloneListenServer ? LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw, FVector::DownVector) : LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw / 2, FVector::DownVector);
 
 	// Subtract the Rotation Difference from the current Local Rotation to get the new local rotation.
-	FRotator Delta = LocalRot - RotationDifference;
+	FRotator Delta = FRotator::ZeroRotator;
+	bIsStandAloneListenServer ? Delta = LocalRot - RotationDifference : Delta = LocalRot - (RotationDifference * .5f);
+	LocalRot - RotationDifference;
 	Delta.Normalize();
 	LocalRot = Delta;
 }
@@ -441,13 +473,13 @@ void UALSCharacterAnimInstance::ResetIKOffsets(float DeltaSeconds)
 {
 	// Interp Foot IK offsets back to 0
 	FootIKValues.FootOffset_L_Location = FMath::VInterpTo(FootIKValues.FootOffset_L_Location,
-	                                                      FVector::ZeroVector, DeltaSeconds, 15.0f);
+	                                                      FVector::ZeroVector, DeltaSeconds, 10.0f);
 	FootIKValues.FootOffset_R_Location = FMath::VInterpTo(FootIKValues.FootOffset_R_Location,
-	                                                      FVector::ZeroVector, DeltaSeconds, 15.0f);
+	                                                      FVector::ZeroVector, DeltaSeconds, 10.0f);
 	FootIKValues.FootOffset_L_Rotation = FMath::RInterpTo(FootIKValues.FootOffset_L_Rotation,
-	                                                      FRotator::ZeroRotator, DeltaSeconds, 15.0f);
+	                                                      FRotator::ZeroRotator, DeltaSeconds, 10.0f);
 	FootIKValues.FootOffset_R_Rotation = FMath::RInterpTo(FootIKValues.FootOffset_R_Rotation,
-	                                                      FRotator::ZeroRotator, DeltaSeconds, 15.0f);
+	                                                      FRotator::ZeroRotator, DeltaSeconds, 10.0f);
 }
 
 void UALSCharacterAnimInstance::SetFootOffsets(float DeltaSeconds, FName EnableFootIKCurve, FName IKFootBone,
@@ -528,7 +560,13 @@ void UALSCharacterAnimInstance::RotateInPlaceCheck()
 	// Step 1: Check if the character should rotate left or right by checking if the Aiming Angle exceeds the threshold.
 	Grounded.bRotateL = AimingValues.AimingAngle.X < RotateInPlace.RotateMinThreshold;
 	Grounded.bRotateR = AimingValues.AimingAngle.X > RotateInPlace.RotateMaxThreshold;
+	
+	/*GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("AimingValues.AimingAngle.X: %f"), float(AimingValues.AimingAngle.X)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Grounded.RotateRate: %f"), float(Grounded.RotateRate)));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("AimingValues.SmoothedAimingRotation.Yaw: %f"), float(AimingValues.SmoothedAimingRotation.Yaw)));*/
 
+	/*UE_LOG(LogTemp, Warning, TEXT("AimingValues.AimingAngle.X: %f"), float(AimingValues.AimingAngle.X));
+	UE_LOG(LogTemp, Warning, TEXT("AimingValues.SmoothedAimingRotation.Yaw: %f"), float(AimingValues.SmoothedAimingRotation.Yaw));*/
 	// Step 2: If the character should be rotating, set the Rotate Rate to scale with the Aim Yaw Rate.
 	// This makes the character rotate faster when moving the camera faster.
 	if (Grounded.bRotateL || Grounded.bRotateR)
@@ -537,6 +575,9 @@ void UALSCharacterAnimInstance::RotateInPlaceCheck()
 			{RotateInPlace.AimYawRateMinRange, RotateInPlace.AimYawRateMaxRange},
 			{RotateInPlace.MinPlayRate, RotateInPlace.MaxPlayRate},
 			CharacterInformation.AimYawRate);
+
+		//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Authority: Grounded.RotateRate: %f"), float(Grounded.RotateRate)));
+		//UE_LOG(LogTemp, Warning, TEXT("Grounded.RotateRate: %f"), float (Grounded.RotateRate));
 	}
 }
 
@@ -572,6 +613,7 @@ void UALSCharacterAnimInstance::TurnInPlaceCheck(float DeltaSeconds)
 
 void UALSCharacterAnimInstance::DynamicTransitionCheck()
 {
+	// Tim can change dynamic foot transition montage here.
 	// Check each foot to see if the location difference between the IK_Foot bone and its desired / target location
 	// (determined via a virtual bone) exceeds a threshold. If it does, play an additive transition animation on that foot.
 	// The currently set transition plays the second half of a 2 foot transition animation, so that only a single foot moves.
@@ -584,25 +626,26 @@ void UALSCharacterAnimInstance::DynamicTransitionCheck()
 	{
 		FALSDynamicMontageParams Params;
 		Params.Animation = TransitionAnim_R;
-		Params.BlendInTime = 0.2f;
-		Params.BlendOutTime = 0.2f;
-		Params.PlayRate = 1.5f;
+		Params.BlendInTime = 0.15f;
+		Params.BlendOutTime = 0.15f;
+		Params.PlayRate = 2.f;
 		Params.StartTime = 0.8f;
-		PlayDynamicTransition(0.1f, Params);
+		PlayDynamicTransition(0.15f, Params);
 	}
 
 	SocketTransformA = GetOwningComponent()->GetSocketTransform(IkFootR_BoneName, RTS_Component);
 	SocketTransformB = GetOwningComponent()->GetSocketTransform(NAME_VB___foot_target_r, RTS_Component);
 	Distance = (SocketTransformB.GetLocation() - SocketTransformA.GetLocation()).Size();
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(1, Character->GetLocalRole(), FString("Distance"), float(Distance));
 	if (Distance > Config.DynamicTransitionThreshold)
 	{
 		FALSDynamicMontageParams Params;
 		Params.Animation = TransitionAnim_L;
-		Params.BlendInTime = 0.2f;
-		Params.BlendOutTime = 0.2f;
-		Params.PlayRate = 1.5f;
+		Params.BlendInTime = 0.15f;
+		Params.BlendOutTime = 0.15f;
+		Params.PlayRate = 2.f;
 		Params.StartTime = 0.8f;
-		PlayDynamicTransition(0.1f, Params);
+		PlayDynamicTransition(0.15f, Params);
 	}
 }
 
