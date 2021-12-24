@@ -66,9 +66,6 @@ void UALSCharacterAnimInstance::NativeBeginPlay()
 void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-
-	//FString Name = FString("Grounded?: ");
-	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 3.f, -1, Character->GetLocalRole(), Name, float(MovementState.Grounded()));
 	
 	if (!Character)
 	{
@@ -139,8 +136,6 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			}*/
 			if (CanDynamicTransition())
 			{
-				//FString Name = Montage->GetName();
-				//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 3.f, -1, FString("CanDynamicTransition()"), float(0.f));
 				DynamicTransitionCheck();
 			}
 		}
@@ -179,8 +174,8 @@ void UALSCharacterAnimInstance::PlayDynamicTransition(float ReTriggerDelay, FALS
 		bCanPlayDynamicTransition = false;
 
 		// Play Dynamic Additive Transition Animation
-		//PlayTransition(Parameters);
-		PlayTransitionBlueprint(Parameters);
+		PlayTransition(Parameters);
+		//PlayTransitionBlueprint(Parameters);
 
 		UWorld* World = GetWorld();
 		check(World);
@@ -190,16 +185,16 @@ void UALSCharacterAnimInstance::PlayDynamicTransition(float ReTriggerDelay, FALS
 	}
 }
 
-void UALSCharacterAnimInstance::CallBlueprintPlayTransition_Implementation(const FALSDynamicMontageParams& Parameters)
-{
-}
+//void UALSCharacterAnimInstance::CallBlueprintPlayTransition_Implementation(const FALSDynamicMontageParams& Parameters)
+//{
+//}
 
-void UALSCharacterAnimInstance::PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters)
-{
-	// Play local transition.
-	PlayTransition(Parameters);
-	CallBlueprintPlayTransition(Parameters);
-}
+//void UALSCharacterAnimInstance::PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters)
+//{
+//	// Play local transition.
+//	//PlayTransition(Parameters);
+//	//CallBlueprintPlayTransition(Parameters);
+//}
 
 bool UALSCharacterAnimInstance::ShouldMoveCheck() const
 {
@@ -338,7 +333,7 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 	               IkFootR_BoneName, FootIKValues.FootLock_R_Alpha, FootIKValues.UseFootLockCurve_R,
 	               FootIKValues.FootLock_R_Location, FootIKValues.FootLock_R_Rotation);
 
-	Character->CallBlueprintDebugPrint(FootIKValues.FootLock_L_Location);
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 1.f, 1, FString("FootIKValues.FootLock_L_Alpha"), float(FootIKValues.FootLock_L_Alpha), FootIKValues.FootLock_L_Location, FRotator::ZeroRotator);
 	
 	if (MovementState.InAir())
 	{
@@ -348,6 +343,7 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 	}
 	else if (!MovementState.Ragdoll())
 	{
+		// Just deals with Z axis foot ik. 
 		// Update all Foot Lock and Foot Offset values when not In Air
 		SetFootOffsets(DeltaSeconds, NAME_Enable_FootIK_L, IkFootL_BoneName, NAME__ALSCharacterAnimInstance__root,
 		               FootOffsetLTarget,
@@ -375,7 +371,8 @@ void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableF
 	if (UseFootLockCurve)
 	{
 	UseFootLockCurve = FMath::Abs(GetCurveValue(NAME__ALSCharacterAnimInstance__RotationAmount)) <= 0.001f || Character->GetLocalRole() == ROLE_AutonomousProxy;
-		FootLockCurveVal = GetCurveValue(FootLockCurve) * (1.f / GetSkelMeshComponent()->AnimUpdateRateParams->UpdateRate);
+	// Tim commented as alpha incorrect on Simulated proxies.
+	FootLockCurveVal = GetCurveValue(FootLockCurve); // *(1.f / GetSkelMeshComponent()->AnimUpdateRateParams->UpdateRate);
 	}
 	else
 	{
@@ -388,14 +385,12 @@ void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableF
 	// so that the foot can only blend out of the locked position or lock to a new position, and never blend in.
 	if (FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha)
 	{
-		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(1, Character->GetLocalRole(), FString("FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha"), float(FootLockCurveVal >= 0.99f || FootLockCurveVal < CurFootLockAlpha));
 		CurFootLockAlpha = FootLockCurveVal;
 	}
 
 	// Step 3: If the Foot Lock curve equals 1, save the new lock location and rotation in component space as the target.
 	if (CurFootLockAlpha >= 0.99f)
 	{
-		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(3, Character->GetLocalRole(), FString("CurFootLockAlpha >= 0.99f"), float(CurFootLockAlpha >= 0.99f));
 		const FTransform& OwnerTransform = GetOwningComponent()->GetSocketTransform(IKFootBone, RTS_Component);
 		CurFootLockLoc = OwnerTransform.GetLocation();
 		CurFootLockRot = OwnerTransform.Rotator();
@@ -405,13 +400,9 @@ void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableF
 	// update the Foot Lock offsets to keep the foot planted in place while the capsule moves.
 	if (CurFootLockAlpha > 0.0f)
 	{
-		//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(5, Character->GetLocalRole(), FString("CurFootLockAlpha > 0.0f"), float(CurFootLockAlpha > 0.0f));
 		SetFootLockOffsets(DeltaSeconds, CurFootLockLoc, CurFootLockRot);
 	}
-	//Character->CallBlueprintDebugPrint(CurFootLockLoc);
-	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(9, Character->GetLocalRole(), FString("CurFootLockLoc.X"), float(CurFootLockLoc.X));
-	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(11, Character->GetLocalRole(), FString("CurFootLockLoc.Y"), float(CurFootLockLoc.Y));
-	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(13, Character->GetLocalRole(), FString("CurFootLockLoc.Z"), float(CurFootLockLoc.Z));
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 1.f, 4, FString("FootLockCurveVal"), float(FootLockCurveVal), CurFootLockLoc, FRotator::ZeroRotator);
 }
 
 void UALSCharacterAnimInstance::SetFootLockOffsets(float DeltaSeconds, FVector& LocalLoc, FRotator& LocalRot)
@@ -421,25 +412,41 @@ void UALSCharacterAnimInstance::SetFootLockOffsets(float DeltaSeconds, FVector& 
 	// to remain planted on the ground.
 	if (Character->GetCharacterMovement()->IsMovingOnGround())
 	{
+		// Fixed DynamicTransition footsteps for Dedicated servers and partial fox for Listen Servers.
+		// The fix is adjust the RotationDifference.Normalize() by an amount that makes nto sense for
+		// LocallyControlled(), not LocallyControlled() BaseCharacters.
+		// Spent ages on this and don't understand the solution, will have another crack at fixing ListenServer
+		// though have less hope for this as maybe DynamicTransitions just don't play on server?
 		RotationDifference = CharacterInformation.CharacterActorRotation - Character->GetCharacterMovement()->GetLastUpdateRotation();
-		RotationDifference.Normalize();
+		// https://docs.unrealengine.com/4.27/en-US/InteractiveExperiences/Networking/Overview/
+		if (Character->GetNetMode() == ENetMode::NM_Client && Character->IsLocallyControlled()) // Client LocallyControlled.
+		{
+			RotationDifference.Normalize();
+			RotationDifference *= .5f;
+			//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 1.f, 1, FString("AutonomousProxy RotationDifference.Normalize()"), float(FootIKValues.FootLock_L_Alpha), FVector::ZeroVector, RotationDifference);
+		}
+		// Server does not appear to play DynamicTransitions so Listen server will never play DynamicTransition footsteps of clients unless investigated and fixed.
+		if (Character->GetNetMode() == ENetMode::NM_Client && !Character->IsLocallyControlled() || // Clients not LocallyControlled 
+			Character->GetNetMode() == ENetMode::NM_ListenServer && !Character->IsLocallyControlled()) // Listen server not LocallyControlled
+		{
+			RotationDifference.Normalize();
+			RotationDifference *= 5.f;
+			//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 1.f, 4, FString("SimulatedProxy RotationDifference.Normalize()"), float(FootIKValues.FootLock_L_Alpha), FVector::ZeroVector, RotationDifference);
+		}
 	}
-
+	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(Character, 1.f, 7, FString("AutonomousProxy RotationDifference.Normalize()"), float(FootIKValues.FootLock_L_Alpha), FVector::ZeroVector, RotationDifference);
+	
 	// Get the distance traveled between frames relative to the mesh rotation
 	// to find how much the foot should be offset to remain planted on the ground.
 	const FVector& LocationDifference = GetOwningComponent()->GetComponentRotation().UnrotateVector(CharacterInformation.Velocity * DeltaSeconds);
-
-	// Tim On Standalone and ListenServer footsteps are fine but on DedicatedServer Clients, LocationDifference &
-	// RotationDifference appear to be twice the value they should be. So halving value on DedicatedServer Clients.
-	bool const bIsStandAloneListenServer = Character->IsLocallyControlled() && Character->GetLocalRole() == ROLE_Authority;
 	
 	// Subtract the location difference from the current local location and rotate
 	// it by the rotation difference to keep the foot planted in component space.
-	bIsStandAloneListenServer ? LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw, FVector::DownVector) : LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw / 2, FVector::DownVector);
+	LocalLoc = (LocalLoc - LocationDifference).RotateAngleAxis(RotationDifference.Yaw, FVector::DownVector);
 
 	// Subtract the Rotation Difference from the current Local Rotation to get the new local rotation.
 	FRotator Delta = FRotator::ZeroRotator;
-	bIsStandAloneListenServer ? Delta = LocalRot - RotationDifference : Delta = LocalRot - (RotationDifference * .5f);
+	Delta = LocalRot - RotationDifference;
 	LocalRot - RotationDifference;
 	Delta.Normalize();
 	LocalRot = Delta;
@@ -636,7 +643,6 @@ void UALSCharacterAnimInstance::DynamicTransitionCheck()
 	SocketTransformA = GetOwningComponent()->GetSocketTransform(IkFootR_BoneName, RTS_Component);
 	SocketTransformB = GetOwningComponent()->GetSocketTransform(NAME_VB___foot_target_r, RTS_Component);
 	Distance = (SocketTransformB.GetLocation() - SocketTransformA.GetLocation()).Size();
-	//UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(1, Character->GetLocalRole(), FString("Distance"), float(Distance));
 	if (Distance > Config.DynamicTransitionThreshold)
 	{
 		FALSDynamicMontageParams Params;

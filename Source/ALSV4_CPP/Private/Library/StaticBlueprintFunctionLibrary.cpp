@@ -5,51 +5,59 @@
 
 #include "Character/ALSBaseCharacter.h"
 
-void UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(AActor* Actor, float Time, int KeyPosition, FString StringVar, float FloatVar)
+void UStaticBlueprintFunctionLibrary::DebugAuthorityClientFloat(AActor* Actor, float Time, int KeyPosition, FString StringVar, float FloatVar, FVector Vector1, FRotator Rotator1)
 {
+	FString Prefix;
+	UObject* Object = Cast<UObject>(Actor);
+	if (Object)
+	{
+		UWorld* World = GEngine->GetWorldFromContextObject(Object, EGetWorldErrorMode::ReturnNull);
+		if (World)
+		{
+			if (World->WorldType == EWorldType::PIE)
+			{
+				switch (World->GetNetMode())
+				{
+				case NM_Client:
+					// GPlayInEditorID 0 is always the server, so 1 will be first client.
+					// You want to keep this logic in sync with GeneratePIEViewportWindowTitle and UpdatePlayInEditorWorldDebugString
+					Prefix = FString::Printf(TEXT("Client %d: "), GPlayInEditorID);
+					break;
+				case NM_DedicatedServer:
+				case NM_ListenServer:
+					Prefix = FString::Printf(TEXT("Server: "));
+					break;
+				case NM_Standalone:
+					break;
+				}
+			}
+		}
+	}
 	int32 UniqueID = -1;
-	ENetRole NNetRole;
 	if (Actor)
 	{
 		AALSBaseCharacter* ALSBaseCharacter = Cast<AALSBaseCharacter>(Actor);
 		if (ALSBaseCharacter)
 		{
-			NNetRole = ALSBaseCharacter->GetLocalRole();
-			FString ControllerName = FString(" NoController: ");
-			if (ALSBaseCharacter->GetController())
+			/*if (ALSBaseCharacter->GetController())
 			{
 				UniqueID = ALSBaseCharacter->GetController()->GetUniqueID();
 			}
-			else
+			else*/
 			{
-				//UniqueID = ALSBaseCharacter->GetUniqueID();
+				UniqueID = ALSBaseCharacter->GetUniqueID();
 			}
 		}
 	}
 	if (KeyPosition != -1)
 	{
-		if (NNetRole == ROLE_Authority)
-		{
-			GEngine->AddOnScreenDebugMessage(KeyPosition, Time, FColor::Red, FString::Printf(TEXT("Auth: %f %s %f"), float(UniqueID), *StringVar, float (FloatVar)));
-			UE_LOG(LogTemp, Warning, TEXT("Auth: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar));
-		}
-		if (NNetRole < ROLE_Authority)
-		{
-			GEngine->AddOnScreenDebugMessage(KeyPosition + 1, Time, FColor::Green, FString::Printf(TEXT("Client: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar)));
-			UE_LOG(LogTemp, Warning, TEXT("Client: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar));
-		}
+		KeyPosition += GPlayInEditorID;
+		GEngine->AddOnScreenDebugMessage(KeyPosition, Time, FColor::Green, FString::Printf(TEXT("%s %f %s %f %s %s"), *Prefix , float(UniqueID), *StringVar, float (FloatVar), *Vector1.ToString(), *Rotator1.ToString()));
+		//UE_LOG(LogTemp, Warning, TEXT("%s %f %s %f %s %s"), *Prefix, float(UniqueID), *StringVar, float(FloatVar), *Vector1.ToString(), *Rotator1.ToString());
 	}
 	else
 	{
-		if (NNetRole == ROLE_Authority)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, Time, FColor::Red, FString::Printf(TEXT("Auth: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar)));
-			UE_LOG(LogTemp, Warning, TEXT("Auth: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar));
-		}
-		if (NNetRole < ROLE_Authority)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, Time, FColor::Green, FString::Printf(TEXT("Client: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar)));
-			UE_LOG(LogTemp, Warning, TEXT("Client: %f %s %f"), float(UniqueID), *StringVar, float(FloatVar));
-		}
+		GEngine->AddOnScreenDebugMessage(-1, Time, FColor::Green, FString::Printf(TEXT("%s %f %s %f %s %s"), *Prefix, float(UniqueID), *StringVar, float(FloatVar), *Vector1.ToString(), *Rotator1.ToString()));
+		//UE_LOG(LogTemp, Warning, TEXT("%s %f %s %f %s %s"), *Prefix, float(UniqueID), *StringVar, float(FloatVar), *Vector1.ToString(), *Rotator1.ToString());
 	}
 }

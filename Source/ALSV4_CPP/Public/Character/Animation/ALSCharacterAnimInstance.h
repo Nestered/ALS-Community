@@ -46,11 +46,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ALS|Animation")
 	void PlayDynamicTransition(float ReTriggerDelay, FALSDynamicMontageParams Parameters);
 
-	UFUNCTION(BlueprintNativeEvent, Category = "ALS|Animation")
-	void CallBlueprintPlayTransition(const FALSDynamicMontageParams& Parameters);
+	//UFUNCTION(BlueprintNativeEvent, Category = "ALS|Animation")
+	//void CallBlueprintPlayTransition(const FALSDynamicMontageParams& Parameters);
 
-	UFUNCTION(BlueprintCallable, Category = "ALS|Animation")
-	void PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters);
+	//UFUNCTION(BlueprintCallable, Category = "ALS|Animation")
+	//void PlayTransitionBlueprint(const FALSDynamicMontageParams& Parameters);
 	
 	UFUNCTION(BlueprintCallable, Category = "ALS|Event")
 	void OnJumped();

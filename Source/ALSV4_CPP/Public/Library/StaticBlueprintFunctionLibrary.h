@@ -17,7 +17,7 @@ class ALSV4_CPP_API UStaticBlueprintFunctionLibrary : public UBlueprintFunctionL
 public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Debug")
-	static void DebugAuthorityClientFloat(AActor* Actor, float Time, int KeyPosition, FString StringVar, float FloatVar);
+	static void DebugAuthorityClientFloat(AActor* Actor, float Time, int KeyPosition, FString StringVar, float FloatVar, FVector Vector1, FRotator Rotator1);
 
 	
 };
