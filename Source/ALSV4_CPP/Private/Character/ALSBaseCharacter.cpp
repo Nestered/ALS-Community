@@ -199,15 +199,6 @@ void AALSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	/*GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Hands tied?: %f"), float(GetMainAnimInstance()->OverlayState.HandsTied())));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("BasePose_N: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().BasePose_N)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("BasePose_CLF: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().BasePose_CLF)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("EnableHandIK_L: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().EnableHandIK_L)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("EnableHandIK_R: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().EnableHandIK_R)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("OverlayOverrideState: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().OverlayOverrideState)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Arm_R_Add: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().Arm_R_Add)));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Arm_L_Add: %f"), float(GetMainAnimInstance()->GetLayerBlendingValues().Arm_L_Add)));*/
-	
 	// Set required values
 	SetEssentialValues(DeltaTime);
 
@@ -1397,25 +1388,27 @@ FVector AALSBaseCharacter::GetPlayerMovementInput() const
 
 void AALSBaseCharacter::PlayerForwardMovementInput(float Value)
 {
-	if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
-	{
-		// Default camera relative movement behavior
-		const float Scale = UALSMathLibrary::FixDiagonalGamepadValues(Value, GetInputAxisValue("MoveRight/Left")).Key;
-		const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
-		AddMovementInput(UKismetMathLibrary::GetForwardVector(DirRotator), Scale);
-	}
+	// Tim moved to GSHeroCharacter.cpp
+	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
+	//{
+	//	// Default camera relative movement behavior
+	//	const float Scale = UALSMathLibrary::FixDiagonalGamepadValues(Value, GetInputAxisValue("MoveRight/Left")).Key;
+	//	const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
+	//	AddMovementInput(UKismetMathLibrary::GetForwardVector(DirRotator), Scale);
+	//}
 }
 
 void AALSBaseCharacter::PlayerRightMovementInput(float Value)
 {
-	if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
-	{
-		// Default camera relative movement behavior
-		const float Scale = UALSMathLibrary::FixDiagonalGamepadValues(GetInputAxisValue("MoveForward/Backwards"), Value)
-			.Value;
-		const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
-		AddMovementInput(UKismetMathLibrary::GetRightVector(DirRotator), Scale);
-	}
+	// Tim moved to GSHeroCharacter.cpp
+	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
+	//{
+	//	// Default camera relative movement behavior
+	//	const float Scale = UALSMathLibrary::FixDiagonalGamepadValues(GetInputAxisValue("MoveForward/Backwards"), Value)
+	//		.Value;
+	//	const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
+	//	AddMovementInput(UKismetMathLibrary::GetRightVector(DirRotator), Scale);
+	//}
 }
 
 void AALSBaseCharacter::PlayerCameraUpInput(float Value)
@@ -1426,15 +1419,17 @@ void AALSBaseCharacter::PlayerCameraUpInput(float Value)
 
 void AALSBaseCharacter::PlayerCameraRightInput(float Value)
 {
+	// Tim moved to GSHeroCharacter.cpp
 	// Tim only allowing input if we are not mantling. Better location to put this? Seems extreme to ignore all input.
-	if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::None)
-	{
-		if (MovementAction == EALSMovementAction::None || MovementAction == EALSMovementAction::Rolling)
-		{
-			// Tim clamping Yaw input for now as TurnInPlace can easily overshoot and trigger turn 180 degrees.
-			AddControllerYawInput(LookLeftRightRate * FMath::Clamp(Value, -.9f, .9f));
-		}
-	}
+	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::None)
+	//{
+	//	if (MovementAction == EALSMovementAction::None || MovementAction == EALSMovementAction::Rolling)
+	//	{
+	//		// Tim clamping Yaw input for now as TurnInPlace can easily overshoot and trigger turn 180 degrees.
+	//		AddControllerYawInput(LookLeftRightRate * FMath::Clamp(Value, -.9f, .9f));
+	//		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, TEXT("PlayerCameraRightInput"));
+	//	}
+	//}
 }
 
 void AALSBaseCharacter::AttackPressedAction()
