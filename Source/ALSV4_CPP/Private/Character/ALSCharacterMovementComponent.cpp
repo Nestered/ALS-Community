@@ -70,12 +70,12 @@ float UALSCharacterMovementComponent::GetMaxBrakingDeceleration() const
 	return CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).Y;
 }
 
-void UALSCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags) // Client only
-{
-	Super::UpdateFromCompressedFlags(Flags);
-
-	bRequestMovementSettingsChange = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
-}
+//void UALSCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags) // Client only
+//{
+//	Super::UpdateFromCompressedFlags(Flags);
+//	
+//	bRequestMovementSettingsChange = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
+//}
 
 class FNetworkPredictionData_Client* UALSCharacterMovementComponent::GetPredictionData_Client() const
 {
@@ -110,6 +110,17 @@ uint8 UALSCharacterMovementComponent::FSavedMove_My::GetCompressedFlags() const
 		Result |= FLAG_Custom_0;
 	}
 
+	if (SavedRequestToStartSprinting)
+	{
+		Result |= FLAG_Custom_1;
+	}
+
+	if (SavedRequestToStartADS)
+	{
+		Result |= FLAG_Custom_2;
+	}
+	
+	
 	return Result;
 }
 

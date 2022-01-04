@@ -33,6 +33,12 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 		                        class FNetworkPredictionData_Client_Character& ClientData) override;
 		virtual void PrepMoveFor(class ACharacter* Character) override;
 
+		// Sprint
+		uint8 SavedRequestToStartSprinting : 1;
+
+		// Aim Down Sights
+		uint8 SavedRequestToStartADS : 1;
+		
 		// Walk Speed Update
 		uint8 bSavedRequestMovementSettingsChange : 1;
 		EALSGait SavedAllowedGait = EALSGait::Walking;
@@ -48,7 +54,7 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 		virtual FSavedMovePtr AllocateNewMove() override;
 	};
 
-	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
+	//virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual class FNetworkPredictionData_Client* GetPredictionData_Client() const override;
 	virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
 

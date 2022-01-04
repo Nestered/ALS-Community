@@ -36,8 +36,8 @@ const FName NAME_root(TEXT("root"));
 const FName NAME_spine_03(TEXT("spine_03"));
 
 
-AALSBaseCharacter::AALSBaseCharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.SetDefaultSubobjectClass<UALSCharacterMovementComponent>(CharacterMovementComponentName))
+AALSBaseCharacter::AALSBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+	//: Super(ObjectInitializer.SetDefaultSubobjectClass<UALSCharacterMovementComponent>(CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = 0;
