@@ -171,13 +171,13 @@ struct FALSMovementSettings
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Movement Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Settings")
 	float WalkSpeed = 0.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Movement Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Settings")
 	float RunSpeed = 0.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Movement Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Settings")
 	float SprintSpeed = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Movement Settings")

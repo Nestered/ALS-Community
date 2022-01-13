@@ -387,6 +387,7 @@ protected:
 
 	virtual void OnJumped_Implementation() override;
 
+protected:
 	virtual void Landed(const FHitResult& Hit) override;
 	
 	void OnLandFrictionReset();
@@ -422,9 +423,12 @@ protected:
 	void AttackPressedAction();
 
 	void AttackReleasedAction();
-	
+
+public:
+	// Tim No longer binding jump input. GAS now deals with jumping.
 	void JumpPressedAction();
 
+protected:
 	void JumpReleasedAction();
 
 	void SprintPressedAction();
@@ -441,8 +445,10 @@ protected:
 
 	void OnSwitchCameraMode();
 
+public:
 	void StancePressedAction();
 
+protected:
 	void WalkPressedAction();
 
 	void RagdollPressedAction();

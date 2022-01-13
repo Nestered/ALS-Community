@@ -55,8 +55,8 @@ void AALSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("LookLeft/Right", this, &AALSBaseCharacter::PlayerCameraRightInput);
 	PlayerInputComponent->BindAction("AttackAction", IE_Pressed, this, &AALSBaseCharacter::AttackPressedAction);
 	PlayerInputComponent->BindAction("AttackAction", IE_Released, this, &AALSBaseCharacter::AttackReleasedAction);
-	PlayerInputComponent->BindAction("JumpAction", IE_Pressed, this, &AALSBaseCharacter::JumpPressedAction);
-	PlayerInputComponent->BindAction("JumpAction", IE_Released, this, &AALSBaseCharacter::JumpReleasedAction);
+	//PlayerInputComponent->BindAction("JumpAction", IE_Pressed, this, &AALSBaseCharacter::JumpPressedAction);
+	//PlayerInputComponent->BindAction("JumpAction", IE_Released, this, &AALSBaseCharacter::JumpReleasedAction);
 	PlayerInputComponent->BindAction("StanceAction", IE_Pressed, this, &AALSBaseCharacter::StancePressedAction);
 	PlayerInputComponent->BindAction("WalkAction", IE_Pressed, this, &AALSBaseCharacter::WalkPressedAction);
 	PlayerInputComponent->BindAction("RagdollAction", IE_Pressed, this, &AALSBaseCharacter::RagdollPressedAction);
@@ -155,7 +155,7 @@ void AALSBaseCharacter::BeginPlay()
 	{
 		MainAnimInstance->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
 	}
-
+	
 	MyCharacterMovementComponent->SetMovementSettings(GetTargetMovementSettings());
 
 	ALSDebugComponent = FindComponentByClass<UALSDebugComponent>();
@@ -928,7 +928,6 @@ void AALSBaseCharacter::OnStanceChanged(const EALSStance PreviousStance)
 	{
 		CameraBehavior->Stance = Stance;
 	}
-
 	MyCharacterMovementComponent->SetMovementSettings(GetTargetMovementSettings());
 }
 
@@ -946,7 +945,6 @@ void AALSBaseCharacter::OnRotationModeChanged(EALSRotationMode PreviousRotationM
 	{
 		CameraBehavior->SetRotationMode(RotationMode);
 	}
-
 	MyCharacterMovementComponent->SetMovementSettings(GetTargetMovementSettings());
 }
 
@@ -1134,8 +1132,10 @@ void AALSBaseCharacter::UpdateCharacterMovement()
 		SetGait(ActualGait);
 	}
 
+	// Tim Commented as using GSCharacterMovementComponent.
+	// Ultimately this only sets maximum movement speeds, GAS system now does this.
 	// Update the Character Max Walk Speed to the configured speeds based on the currently Allowed Gait.
-	MyCharacterMovementComponent->SetAllowedGait(AllowedGait);
+	//MyCharacterMovementComponent->SetAllowedGait(AllowedGait);
 }
 
 void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
@@ -1194,9 +1194,7 @@ void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
 			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("!!!!bCanUpdateMovingRot:")));
 			
 			// Tim I want rotation limited by default, not dependent on ViewMode, aiming etc.
-			// Limit rotation set to minimum of total angle of 90 degrees as TurnInPlace can rotate character 90 degrees resulting
-			// in 'overshoot' and a ping pong effect, Luckily 90 degrees is ok.
-			LimitRotation(-35.0f, 35.0f, 20.0f, DeltaTime); // LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
+			LimitRotation(-25.0f, 25.0f, 20.0f, DeltaTime); // LimitRotation(-5.0f, 5.0f, 5.0f, DeltaTime);
 
 			// Apply the RotationAmount curve from Turn In Place Animations.
 			// The Rotation Amount curve defines how much rotation should be applied each frame,
@@ -1345,6 +1343,7 @@ float AALSBaseCharacter::CalculateGroundedRotationRate() const
 	// Using the curve in conjunction with the mapped speed gives you a high level of control over the rotation
 	// rates for each speed. Increase the speed if the camera is rotating quickly for more responsive rotation.
 
+	// Tim Commented as using GSCharacterMovementComponent.
 	const float MappedSpeedVal = MyCharacterMovementComponent->GetMappedSpeed();
 	const float CurveVal = MyCharacterMovementComponent->CurrentMovementSettings.RotationRateCurve->GetFloatValue(MappedSpeedVal);
 	const float ClampedAimYawRate = FMath::GetMappedRangeValueClamped({0.0f, 300.0f}, {1.0f, 3.0f}, AimYawRate); // 300.f
@@ -1492,6 +1491,7 @@ void AALSBaseCharacter::JumpPressedAction()
 			else if (Stance == EALSStance::Crouching)
 			{
 				UnCrouch();
+				UE_LOG(LogTemp, Warning, TEXT("UnCrouch();"));
 			}
 		}
 		else if (MovementState == EALSMovementState::Ragdoll)
@@ -1503,7 +1503,7 @@ void AALSBaseCharacter::JumpPressedAction()
 
 void AALSBaseCharacter::JumpReleasedAction()
 {
-	StopJumping();
+	/*StopJumping();*/
 }
 
 void AALSBaseCharacter::SprintPressedAction()
@@ -1598,8 +1598,10 @@ void AALSBaseCharacter::StancePressedAction()
 
 	if (LastStanceInputTime - PrevStanceInputTime <= RollDoubleTapTimeout)
 	{
+		// Tim Don't think I will need this, plus it breaks crouching/standing GAS movement
+		// speed modifiers.
 		// Roll
-		Replicated_PlayMontage(GetRollAnimation(), 1.15f);
+		//Replicated_PlayMontage(GetRollAnimation(), 1.15f);
 
 		if (Stance == EALSStance::Standing)
 		{
