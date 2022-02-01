@@ -21,51 +21,41 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 {
 	GENERATED_UCLASS_BODY()
 
-	//class FSavedMove_My : public FSavedMove_Character
-	//{
-	//public:
+	class FSavedMove_My : public FSavedMove_Character
+	{
+	public:
 
-	//	typedef FSavedMove_Character Super;
+		typedef FSavedMove_Character Super;
 
-	//	virtual void Clear() override;
-	//	virtual uint8 GetCompressedFlags() const override;
-	//	virtual void SetMoveFor(ACharacter* Character, float InDeltaTime, FVector const& NewAccel,
-	//	                        class FNetworkPredictionData_Client_Character& ClientData) override;
-	//	virtual void PrepMoveFor(class ACharacter* Character) override;
+		virtual void Clear() override;
+		virtual uint8 GetCompressedFlags() const override;
+		virtual void SetMoveFor(ACharacter* Character, float InDeltaTime, FVector const& NewAccel,
+		                        class FNetworkPredictionData_Client_Character& ClientData) override;
+		virtual void PrepMoveFor(class ACharacter* Character) override;
+		
+		// Walk Speed Update
+		uint8 bSavedRequestMovementSettingsChange : 1;
+		EALSGait SavedAllowedGait = EALSGait::Walking;
+	};
 
-	//	///@brief This is used to check whether or not two moves can be combined into one.
-	//	///Basically you just check to make sure that the saved variables are the same.
-	//	virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character, float MaxDelta) const override;
-	//	
-	//	// Sprint
-	//	uint8 SavedRequestToStartSprinting : 1;
+	class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character
+	{
+	public:
+		FNetworkPredictionData_Client_My(const UCharacterMovementComponent& ClientMovement);
 
-	//	// Aim Down Sights
-	//	uint8 SavedRequestToStartADS : 1;
-	//	
-	//	// Walk Speed Update
-	//	uint8 bSavedRequestMovementSettingsChange : 1;
-	//	EALSGait SavedAllowedGait = EALSGait::Walking;
-	//};
+		typedef FNetworkPredictionData_Client_Character Super;
 
-	//class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character
-	//{
-	//public:
-	//	FNetworkPredictionData_Client_My(const UCharacterMovementComponent& ClientMovement);
+		virtual FSavedMovePtr AllocateNewMove() override;
+	};
 
-	//	typedef FNetworkPredictionData_Client_Character Super;
+	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
+	virtual class FNetworkPredictionData_Client* GetPredictionData_Client() const override;
+	virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
 
-	//	virtual FSavedMovePtr AllocateNewMove() override;
-	//};
-
-	////virtual void UpdateFromCompressedFlags(uint8 Flags) override;
-	//virtual class FNetworkPredictionData_Client* GetPredictionData_Client() const override;
-	//virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
-
-	//// Movement Settings Override
-	//virtual void PhysWalking(float deltaTime, int32 Iterations) override;
-	//virtual float GetMaxAcceleration() const override;
-	//virtual float GetMaxBrakingDeceleration() const override;
+	// Movement Settings Override
+	virtual void PhysWalking(float deltaTime, int32 Iterations) override;
+	virtual float GetMaxAcceleration() const override;
+	virtual float GetMaxBrakingDeceleration() const override;
 
 	// Movement Settings Variables
 	UPROPERTY()
@@ -74,7 +64,7 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 	UPROPERTY()
 	EALSGait AllowedGait = EALSGait::Walking;
 
-	UPROPERTY(BlueprintReadWrite, Category = "ALS|Movement System")
+	UPROPERTY(BlueprintReadOnly, Category = "ALS|Movement System")
 	FALSMovementSettings CurrentMovementSettings;
 	
 	// Set Movement Curve (Called in every instance)
@@ -84,9 +74,18 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 	void SetMovementSettings(FALSMovementSettings NewMovementSettings);
 
 	// Set Max Walking Speed (Called from the owning client)
-	//UFUNCTION(BlueprintCallable, Category = "Movement Settings")
-	//void SetAllowedGait(EALSGait NewAllowedGait);
+	UFUNCTION(BlueprintCallable, Category = "Movement Settings")
+	void SetAllowedGait(EALSGait NewAllowedGait);
 
-	//UFUNCTION(Reliable, Server, Category = "Movement Settings")
-	//void Server_SetAllowedGait(EALSGait NewAllowedGait);
+	// Set Max Walking Speed. Ignores if this is the same as current Gait.
+	// GAS Slow effect [UGSRequestMovementSettingsChange] needs to call this
+	// to blend movement component moves.
+	UFUNCTION(BlueprintCallable, Category = "Movement Settings")
+	void SetForcedAllowedGait(EALSGait NewAllowedGait);
+
+	UFUNCTION(Reliable, Server, Category = "Movement Settings")
+	void Server_SetAllowedGait(EALSGait NewAllowedGait);
+
+	UFUNCTION(Reliable, Client, Category = "Movement Settings")
+	void Client_SetAllowedGait();
 };

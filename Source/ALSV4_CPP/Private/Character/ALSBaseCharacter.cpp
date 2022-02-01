@@ -642,7 +642,9 @@ bool AALSBaseCharacter::CanSprint() const
 		return false;
 	}
 
-	const bool bValidInputAmount = MovementInputAmount > 0.9f;
+	// Input sometimes seems to think it is below MovementInputAmount > 0.9f, causes jitter on clients when slowed.
+	// Lowering threshold to stop jitter.
+	const bool bValidInputAmount = MovementInputAmount > 0.6f;
 
 	if (RotationMode == EALSRotationMode::VelocityDirection)
 	{
@@ -1135,7 +1137,7 @@ void AALSBaseCharacter::UpdateCharacterMovement()
 	// Tim Commented as using GSCharacterMovementComponent.
 	// Ultimately this only sets maximum movement speeds, GAS system now does this.
 	// Update the Character Max Walk Speed to the configured speeds based on the currently Allowed Gait.
-	//MyCharacterMovementComponent->SetAllowedGait(AllowedGait);
+	MyCharacterMovementComponent->SetAllowedGait(AllowedGait);
 }
 
 void AALSBaseCharacter::UpdateGroundedRotation(float DeltaTime)
@@ -1288,19 +1290,38 @@ EALSGait AALSBaseCharacter::GetAllowedGait() const
 		{
 			if (DesiredGait == EALSGait::Sprinting)
 			{
+				//UE_LOG(LogTemp, Warning, TEXT("CanSprint() %f"), float(CanSprint()));
 				return CanSprint() ? EALSGait::Sprinting : EALSGait::Running;
 			}
 			return DesiredGait;
 		}
 	}
 
-	// Crouching stance & Aiming rot mode has same behaviour
+	// Crouching speed dealt with in UGSCharacterMovementComponent::OnMovementUpdated
+	
+	if (Stance == EALSStance::Crouching)
+	{
+		if (DesiredGait == EALSGait::Sprinting)
+		{
+			return EALSGait::Sprinting;
+		}
+		if (DesiredGait == EALSGait::Running)
+		{
+			return EALSGait::Running;
+		}
+		if (DesiredGait == EALSGait::Walking)
+		{
+			return EALSGait::Running;
+		}
+	}
 
+	// Aiming rot mode has same behaviour
+	
 	if (DesiredGait == EALSGait::Sprinting)
 	{
 		return EALSGait::Running;
 	}
-
+	
 	return DesiredGait;
 }
 
@@ -1511,11 +1532,13 @@ void AALSBaseCharacter::SprintPressedAction()
 	// Store gait for coming out of sprinting.
 	SetStoredGait(Gait);
 	SetDesiredGait(EALSGait::Sprinting);
+	//UE_LOG(LogTemp, Warning, TEXT("SprintPressedAction()"));
 }
 
 void AALSBaseCharacter::SprintReleasedAction()
 {
 	SetDesiredGait(GetStoredGait());
+	//UE_LOG(LogTemp, Warning, TEXT("SprintReleasedAction()"));
 }
 
 void AALSBaseCharacter::AimPressedAction()

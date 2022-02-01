@@ -10,178 +10,160 @@
 #include "Character/ALSBaseCharacter.h"
 
 #include "Curves/CurveVector.h"
+#include "Net/UnrealNetwork.h"
 
 UALSCharacterMovementComponent::UALSCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 }
 
-//void UALSCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVector& OldLocation,
-//                                                       const FVector& OldVelocity)
-//{
-//	Super::OnMovementUpdated(DeltaTime, OldLocation, OldVelocity);
-//
-//	if (!CharacterOwner)
-//	{
-//		return;
-//	}
-//
-//	// Set Movement Settings
-//	if (bRequestMovementSettingsChange)
-//	{
-//		const float UpdateMaxWalkSpeed = CurrentMovementSettings.GetSpeedForGait(AllowedGait);
-//		MaxWalkSpeed = UpdateMaxWalkSpeed;
-//		MaxWalkSpeedCrouched = UpdateMaxWalkSpeed;
-//
-//		bRequestMovementSettingsChange = false;
-//	}
-//}
-//
-//void UALSCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
-//{
-//	if (CurrentMovementSettings.MovementCurve)
-//	{
-//		// Update the Ground Friction using the Movement Curve.
-//		// This allows for fine control over movement behavior at each speed.
-//		GroundFriction = CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).Z;
-//	}
-//	Super::PhysWalking(deltaTime, Iterations);
-//}
-//
-//float UALSCharacterMovementComponent::GetMaxAcceleration() const
-//{
-//	// Update the Acceleration using the Movement Curve.
-//	// This allows for fine control over movement behavior at each speed.
-//	if (!IsMovingOnGround() || !CurrentMovementSettings.MovementCurve)
-//	{
-//		return Super::GetMaxAcceleration();
-//	}
-//	return CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).X;
-//}
-//
-//float UALSCharacterMovementComponent::GetMaxBrakingDeceleration() const
-//{
-//	// Update the Deceleration using the Movement Curve.
-//	// This allows for fine control over movement behavior at each speed.
-//	if (!IsMovingOnGround() || !CurrentMovementSettings.MovementCurve)
-//	{
-//		return Super::GetMaxBrakingDeceleration();
-//	}
-//	return CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).Y;
-//}
-//
-////void UALSCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags) // Client only
-////{
-////	Super::UpdateFromCompressedFlags(Flags);
-////	
-////	bRequestMovementSettingsChange = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
-////}
-//
-//class FNetworkPredictionData_Client* UALSCharacterMovementComponent::GetPredictionData_Client() const
-//{
-//	check(PawnOwner != nullptr);
-//
-//	if (!ClientPredictionData)
-//	{
-//		UALSCharacterMovementComponent* MutableThis = const_cast<UALSCharacterMovementComponent*>(this);
-//
-//		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_My(*this);
-//		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 92.f;
-//		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 140.f;
-//	}
-//
-//	return ClientPredictionData;
-//}
-//
-//void UALSCharacterMovementComponent::FSavedMove_My::Clear()
-//{
-//	Super::Clear();
-//
-//	bSavedRequestMovementSettingsChange = false;
-//	SavedAllowedGait = EALSGait::Walking;
-//}
-//
-//uint8 UALSCharacterMovementComponent::FSavedMove_My::GetCompressedFlags() const
-//{
-//	uint8 Result = Super::GetCompressedFlags();
-//
-//	if (bSavedRequestMovementSettingsChange)
-//	{
-//		Result |= FLAG_Custom_0;
-//	}
-//
-//	if (SavedRequestToStartSprinting)
-//	{
-//		Result |= FLAG_Custom_1;
-//	}
-//
-//	if (SavedRequestToStartADS)
-//	{
-//		Result |= FLAG_Custom_2;
-//	}
-//	
-//	
-//	return Result;
-//}
-//
-//void UALSCharacterMovementComponent::FSavedMove_My::SetMoveFor(ACharacter* Character, float InDeltaTime,
-//                                                               FVector const& NewAccel,
-//                                                               class FNetworkPredictionData_Client_Character&
-//                                                               ClientData)
-//{
-//	Super::SetMoveFor(Character, InDeltaTime, NewAccel, ClientData);
-//
-//	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
-//	if (CharacterMovement)
-//	{
-//		bSavedRequestMovementSettingsChange = CharacterMovement->bRequestMovementSettingsChange;
-//		SavedAllowedGait = CharacterMovement->AllowedGait;
-//	}
-//}
-//
-//void UALSCharacterMovementComponent::FSavedMove_My::PrepMoveFor(ACharacter* Character)
-//{
-//	Super::PrepMoveFor(Character);
-//
-//	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
-//	if (CharacterMovement)
-//	{
-//		CharacterMovement->AllowedGait = SavedAllowedGait;
-//	}
-//}
-//
-//bool UALSCharacterMovementComponent::FSavedMove_My::CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character,
-//	float MaxDelta) const
-//{
-//	//Set which moves can be combined together. This will depend on the bit flags that are used.
-//	if (SavedRequestToStartSprinting != ((FSavedMove_My*)NewMove.Get())->SavedRequestToStartSprinting)
-//	{
-//		return false;
-//	}
-//
-//	if (SavedRequestToStartADS != ((FSavedMove_My*)NewMove.Get())->SavedRequestToStartADS)
-//	{
-//		return false;
-//	}
-//
-//	return Super::CanCombineWith(NewMove, Character, MaxDelta);
-//}
-//
-//UALSCharacterMovementComponent::FNetworkPredictionData_Client_My::FNetworkPredictionData_Client_My(
-//	const UCharacterMovementComponent& ClientMovement)
-//	: Super(ClientMovement)
-//{
-//}
-//
-//FSavedMovePtr UALSCharacterMovementComponent::FNetworkPredictionData_Client_My::AllocateNewMove()
-//{
-//	return MakeShared<FSavedMove_My>();
-//}
-//
-//void UALSCharacterMovementComponent::Server_SetAllowedGait_Implementation(const EALSGait NewAllowedGait)
-//{
-//	AllowedGait = NewAllowedGait;
-//}
+void UALSCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVector& OldLocation,
+                                                       const FVector& OldVelocity)
+{
+	Super::OnMovementUpdated(DeltaTime, OldLocation, OldVelocity);
+	// Moved to UGSCharacterMovementComponent
+	//if (!CharacterOwner)
+	//{
+	//	return;
+	//}
+
+	//// Set Movement Settings
+	//if (bRequestMovementSettingsChange)
+	//{
+	//	const float UpdateMaxWalkSpeed = CurrentMovementSettings.GetSpeedForGait(AllowedGait); // SavedAllowedGait
+	//	MaxWalkSpeed = UpdateMaxWalkSpeed;
+	//	MaxWalkSpeedCrouched = UpdateMaxWalkSpeed;
+	//	if (PawnOwner->GetLocalRole() == ROLE_Authority)
+	//	{
+	//		UE_LOG(LogTemp, Warning, TEXT("Authority: AllowedGait %f UpdateMaxWalkSpeed %f"), float(AllowedGait), float(UpdateMaxWalkSpeed));
+	//	}
+	//	if (PawnOwner->GetLocalRole() < ROLE_Authority)
+	//	{
+	//		UE_LOG(LogTemp, Warning, TEXT("Client: AllowedGait %f UpdateMaxWalkSpeed %f"), float(AllowedGait), float(UpdateMaxWalkSpeed));
+	//	}
+	//	bRequestMovementSettingsChange = false;
+	//}
+}
+
+void UALSCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
+{
+	if (CurrentMovementSettings.MovementCurve)
+	{
+		// Update the Ground Friction using the Movement Curve.
+		// This allows for fine control over movement behavior at each speed.
+		GroundFriction = CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).Z;
+	}
+	Super::PhysWalking(deltaTime, Iterations);
+}
+
+float UALSCharacterMovementComponent::GetMaxAcceleration() const
+{
+	// Update the Acceleration using the Movement Curve.
+	// This allows for fine control over movement behavior at each speed.
+	if (!IsMovingOnGround() || !CurrentMovementSettings.MovementCurve)
+	{
+		return Super::GetMaxAcceleration();
+	}
+	return CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).X;
+}
+
+float UALSCharacterMovementComponent::GetMaxBrakingDeceleration() const
+{
+	// Update the Deceleration using the Movement Curve.
+	// This allows for fine control over movement behavior at each speed.
+	if (!IsMovingOnGround() || !CurrentMovementSettings.MovementCurve)
+	{
+		return Super::GetMaxBrakingDeceleration();
+	}
+	return CurrentMovementSettings.MovementCurve->GetVectorValue(GetMappedSpeed()).Y;
+}
+
+void UALSCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags) // Client only
+{
+	Super::UpdateFromCompressedFlags(Flags);
+
+	bRequestMovementSettingsChange = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
+}
+
+class FNetworkPredictionData_Client* UALSCharacterMovementComponent::GetPredictionData_Client() const
+{
+	check(PawnOwner != nullptr);
+
+	if (!ClientPredictionData)
+	{
+		UALSCharacterMovementComponent* MutableThis = const_cast<UALSCharacterMovementComponent*>(this);
+
+		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_My(*this);
+		// Maximum distance character is allowed to lag behind server location when interpolating between updates.
+		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 292.f;
+		// Maximum distance beyond which character is teleported to the new server location without any smoothing.
+		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 500.f;
+	}
+
+	return ClientPredictionData;
+}
+
+void UALSCharacterMovementComponent::FSavedMove_My::Clear()
+{
+	Super::Clear();
+
+	bSavedRequestMovementSettingsChange = false;
+	SavedAllowedGait = EALSGait::Walking;
+}
+
+uint8 UALSCharacterMovementComponent::FSavedMove_My::GetCompressedFlags() const
+{
+	uint8 Result = Super::GetCompressedFlags();
+
+	if (bSavedRequestMovementSettingsChange)
+	{
+		Result |= FLAG_Custom_0;
+	}
+
+	return Result;
+}
+
+void UALSCharacterMovementComponent::FSavedMove_My::SetMoveFor(ACharacter* Character, float InDeltaTime,
+                                                               FVector const& NewAccel,
+                                                               class FNetworkPredictionData_Client_Character&
+                                                               ClientData)
+{
+	Super::SetMoveFor(Character, InDeltaTime, NewAccel, ClientData);
+
+	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
+	if (CharacterMovement)
+	{
+		bSavedRequestMovementSettingsChange = CharacterMovement->bRequestMovementSettingsChange;
+		SavedAllowedGait = CharacterMovement->AllowedGait;
+	}
+}
+
+void UALSCharacterMovementComponent::FSavedMove_My::PrepMoveFor(ACharacter* Character)
+{
+	Super::PrepMoveFor(Character);
+
+	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
+	if (CharacterMovement)
+	{
+		CharacterMovement->AllowedGait = SavedAllowedGait;
+	}
+}
+
+UALSCharacterMovementComponent::FNetworkPredictionData_Client_My::FNetworkPredictionData_Client_My(
+	const UCharacterMovementComponent& ClientMovement)
+	: Super(ClientMovement)
+{
+}
+
+FSavedMovePtr UALSCharacterMovementComponent::FNetworkPredictionData_Client_My::AllocateNewMove()
+{
+	return MakeShared<FSavedMove_My>();
+}
+
+void UALSCharacterMovementComponent::Server_SetAllowedGait_Implementation(const EALSGait NewAllowedGait)
+{
+	AllowedGait = NewAllowedGait;
+}
 
 float UALSCharacterMovementComponent::GetMappedSpeed() const
 {
@@ -214,25 +196,76 @@ void UALSCharacterMovementComponent::SetMovementSettings(FALSMovementSettings Ne
 	bRequestMovementSettingsChange = true;
 }
 
-//void UALSCharacterMovementComponent::SetAllowedGait(EALSGait NewAllowedGait)
-//{
-//	if (AllowedGait != NewAllowedGait)
-//	{
-//		if (PawnOwner->IsLocallyControlled())
-//		{
-//			AllowedGait = NewAllowedGait;
-//			if (GetCharacterOwner()->GetLocalRole() == ROLE_AutonomousProxy)
-//			{
-//				Server_SetAllowedGait(NewAllowedGait);
-//			}
-//			bRequestMovementSettingsChange = true;
-//			return;
-//		}
-//		if (!PawnOwner->HasAuthority())
-//		{
-//			const float UpdateMaxWalkSpeed = CurrentMovementSettings.GetSpeedForGait(AllowedGait);
-//			MaxWalkSpeed = UpdateMaxWalkSpeed;
-//			MaxWalkSpeedCrouched = UpdateMaxWalkSpeed;
-//		}
-//	}
-//}
+void UALSCharacterMovementComponent::SetAllowedGait(EALSGait NewAllowedGait)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("SetAllowedGait"));
+	if (AllowedGait != NewAllowedGait)
+	{
+		if (PawnOwner->IsLocallyControlled())
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("SetAllowedGait()PawnOwner->IsLocallyControlled()"));
+			AllowedGait = NewAllowedGait;
+			if (GetCharacterOwner()->GetLocalRole() == ROLE_AutonomousProxy)
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("SetAllowedGait()GetCharacterOwner()->GetLocalRole() == ROLE_AutonomousProxy"));
+				Server_SetAllowedGait(NewAllowedGait);
+			}
+			bRequestMovementSettingsChange = true;
+			//return;
+		}
+		//if (!PawnOwner->HasAuthority())
+		//{
+		//	//const float UpdateMaxWalkSpeed = CurrentMovementSettings.GetSpeedForGait(AllowedGait);
+		//	//MaxWalkSpeed = UpdateMaxWalkSpeed;
+		//	//MaxWalkSpeedCrouched = UpdateMaxWalkSpeed;
+		//}
+	}
+}
+
+void UALSCharacterMovementComponent::SetForcedAllowedGait(EALSGait NewAllowedGait)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("SetForcedAllowedGait"));
+	if (AllowedGait == NewAllowedGait)
+	{
+		if (PawnOwner->IsLocallyControlled())
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("SetForcedAllowedGait()PawnOwner->IsLocallyControlled()"));
+			AllowedGait = NewAllowedGait;
+			if (GetCharacterOwner()->GetLocalRole() == ROLE_AutonomousProxy)
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("SetForcedAllowedGait()GetCharacterOwner()->GetLocalRole() == ROLE_AutonomousProxy"));
+				Server_SetAllowedGait(NewAllowedGait);
+				/*if (PawnOwner->GetLocalRole() == ROLE_Authority)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("AuthorityAutonomousProxy:Server_SetAllowedGait(NewAllowedGait)"));
+				}
+				if (PawnOwner->GetLocalRole() < ROLE_Authority)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("ClientAutonomousProxy: Server_SetAllowedGait(NewAllowedGait)"));
+				}*/
+			}
+			bRequestMovementSettingsChange = true;
+			//return;
+		}
+	}
+	//if (!PawnOwner->HasAuthority())
+	//{
+	//	//const float UpdateMaxWalkSpeed = CurrentMovementSettings.GetSpeedForGait(AllowedGait);
+	//	//MaxWalkSpeed = UpdateMaxWalkSpeed;
+	//	//MaxWalkSpeedCrouched = UpdateMaxWalkSpeed;
+	//}
+}
+
+void UALSCharacterMovementComponent::Client_SetAllowedGait_Implementation()
+{
+	// UNUSED???
+	SetForcedAllowedGait(AllowedGait);
+	if (PawnOwner->GetLocalRole() == ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Authority: Client_SetAllowedGait_Implementation()"));
+	}
+	if (PawnOwner->GetLocalRole() < ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Client: Client_SetAllowedGait_Implementation()"));
+	}
+}
