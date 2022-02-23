@@ -83,6 +83,8 @@ void UALSCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags) // C
 	Super::UpdateFromCompressedFlags(Flags);
 
 	bRequestMovementSettingsChange = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
+
+	bWantsStaminaChange = (Flags & FSavedMove_Character::FLAG_Custom_1) != 0;
 }
 
 class FNetworkPredictionData_Client* UALSCharacterMovementComponent::GetPredictionData_Client() const
@@ -95,9 +97,9 @@ class FNetworkPredictionData_Client* UALSCharacterMovementComponent::GetPredicti
 
 		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_My(*this);
 		// Maximum distance character is allowed to lag behind server location when interpolating between updates.
-		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 292.f;
+		//MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 292.f;
 		// Maximum distance beyond which character is teleported to the new server location without any smoothing.
-		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 500.f;
+		//MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 500.f;
 	}
 
 	return ClientPredictionData;
@@ -109,6 +111,8 @@ void UALSCharacterMovementComponent::FSavedMove_My::Clear()
 
 	bSavedRequestMovementSettingsChange = false;
 	SavedAllowedGait = EALSGait::Walking;
+	bSavedWantsStaminaChange = false;
+	SavedStamina = 0.f;
 }
 
 uint8 UALSCharacterMovementComponent::FSavedMove_My::GetCompressedFlags() const
@@ -120,6 +124,11 @@ uint8 UALSCharacterMovementComponent::FSavedMove_My::GetCompressedFlags() const
 		Result |= FLAG_Custom_0;
 	}
 
+	if (bSavedWantsStaminaChange)
+	{
+		Result |= FLAG_Custom_1;
+	}
+	
 	return Result;
 }
 
@@ -131,10 +140,24 @@ void UALSCharacterMovementComponent::FSavedMove_My::SetMoveFor(ACharacter* Chara
 	Super::SetMoveFor(Character, InDeltaTime, NewAccel, ClientData);
 
 	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
-	if (CharacterMovement)
+	AALSBaseCharacter* ALSBaseCharacter = Cast<AALSBaseCharacter>(Character);
+	if (CharacterMovement && ALSBaseCharacter)
 	{
 		bSavedRequestMovementSettingsChange = CharacterMovement->bRequestMovementSettingsChange;
 		SavedAllowedGait = CharacterMovement->AllowedGait;
+
+		//This is literally just the exact opposite of UpdateFromCompressed flags. We're taking the input
+		//from the player and storing it in the saved move.
+		bSavedWantsStaminaChange = CharacterMovement->bWantsStaminaChange;
+		SavedStamina = CharacterMovement->Stamina;
+		/*if (ALSBaseCharacter->GetLocalRole() == ROLE_Authority)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Authority: SetMoveFor SavedStamina %f"), float(SavedStamina));
+		}
+		if (ALSBaseCharacter->GetLocalRole() < ROLE_Authority)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Client: SetMoveFor SavedStamina %f"), float(SavedStamina));
+		}*/
 	}
 }
 
@@ -143,10 +166,38 @@ void UALSCharacterMovementComponent::FSavedMove_My::PrepMoveFor(ACharacter* Char
 	Super::PrepMoveFor(Character);
 
 	UALSCharacterMovementComponent* CharacterMovement = Cast<UALSCharacterMovementComponent>(Character->GetCharacterMovement());
-	if (CharacterMovement)
+	AALSBaseCharacter* ALSBaseCharacter = Cast<AALSBaseCharacter>(Character);
+	if (CharacterMovement && ALSBaseCharacter)
 	{
 		CharacterMovement->AllowedGait = SavedAllowedGait;
+
+		//This is just the exact opposite of SetMoveFor. It copies the state from the saved move to the movement
+		//component before a correction is made to a client.
+		CharacterMovement->Stamina = SavedStamina;
+		/*if (ALSBaseCharacter->GetLocalRole() == ROLE_Authority)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Authority: PrepMoveFor CharacterMovement->Stamina %f"), float(CharacterMovement->Stamina));
+		}
+		if (ALSBaseCharacter->GetLocalRole() < ROLE_Authority)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Client: PrepMoveFor CharacterMovement->Stamina %f"), float(CharacterMovement->Stamina));
+		}*/
 	}
+}
+
+bool UALSCharacterMovementComponent::FSavedMove_My::CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character,
+	float MaxDelta) const
+{
+	if (bSavedRequestMovementSettingsChange != ((FSavedMove_My*)&NewMove)->bSavedRequestMovementSettingsChange)
+	{
+		return false;
+	}
+
+	if (SavedStamina != ((FSavedMove_My*)&NewMove)->SavedStamina)
+	{
+		return false;
+	}
+	return Super::CanCombineWith(NewMove, Character, MaxDelta);
 }
 
 UALSCharacterMovementComponent::FNetworkPredictionData_Client_My::FNetworkPredictionData_Client_My(
@@ -256,16 +307,41 @@ void UALSCharacterMovementComponent::SetForcedAllowedGait(EALSGait NewAllowedGai
 	//}
 }
 
-void UALSCharacterMovementComponent::Client_SetAllowedGait_Implementation()
+void UALSCharacterMovementComponent::ServerSetStamina_Implementation(const float& SendStamina)
 {
-	// UNUSED???
-	SetForcedAllowedGait(AllowedGait);
-	if (PawnOwner->GetLocalRole() == ROLE_Authority)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Authority: Client_SetAllowedGait_Implementation()"));
-	}
-	if (PawnOwner->GetLocalRole() < ROLE_Authority)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Client: Client_SetAllowedGait_Implementation()"));
-	}
+	Stamina = SendStamina;
+	//if (PawnOwner->GetLocalRole() == ROLE_Authority)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Authority: ServerSetStamina"));
+	//}
+	//if (PawnOwner->GetLocalRole() < ROLE_Authority)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Client: ServerSetStamina"));
+	//}
+	//UE_LOG(LogTemp, Warning, TEXT("ServerSetStamina"));
 }
+
+bool UALSCharacterMovementComponent::ServerSetStamina_Validate(const float& SendStamina)
+{
+	return true;
+}
+
+void UALSCharacterMovementComponent::DoStaminaChange()
+{
+	bWantsStaminaChange = true;
+}
+
+//void UALSCharacterMovementComponent::Client_SetAllowedGait_Implementation()
+//{
+//	// UNUSED???
+//	UE_LOG(LogTemp, Warning, TEXT("UNUSED???"));
+//	SetForcedAllowedGait(AllowedGait);
+//	//if (PawnOwner->GetLocalRole() == ROLE_Authority)
+//	//{
+//	//	UE_LOG(LogTemp, Warning, TEXT("Authority: Client_SetAllowedGait_Implementation()"));
+//	//}
+//	//if (PawnOwner->GetLocalRole() < ROLE_Authority)
+//	//{
+//	//	UE_LOG(LogTemp, Warning, TEXT("Client: Client_SetAllowedGait_Implementation()"));
+//	//}
+//}

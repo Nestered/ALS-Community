@@ -49,10 +49,10 @@ void AALSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindAxis("MoveForward/Backwards", this, &AALSBaseCharacter::PlayerForwardMovementInput);
-	PlayerInputComponent->BindAxis("MoveRight/Left", this, &AALSBaseCharacter::PlayerRightMovementInput);
-	PlayerInputComponent->BindAxis("LookUp/Down", this, &AALSBaseCharacter::PlayerCameraUpInput);
-	PlayerInputComponent->BindAxis("LookLeft/Right", this, &AALSBaseCharacter::PlayerCameraRightInput);
+	//PlayerInputComponent->BindAxis("MoveForward/Backwards", this, &AALSBaseCharacter::PlayerForwardMovementInput);
+	//PlayerInputComponent->BindAxis("MoveRight/Left", this, &AALSBaseCharacter::PlayerRightMovementInput);
+	//PlayerInputComponent->BindAxis("LookUp/Down", this, &AALSBaseCharacter::PlayerCameraUpInput);
+	//PlayerInputComponent->BindAxis("LookLeft/Right", this, &AALSBaseCharacter::PlayerCameraRightInput);
 	PlayerInputComponent->BindAction("AttackAction", IE_Pressed, this, &AALSBaseCharacter::AttackPressedAction);
 	PlayerInputComponent->BindAction("AttackAction", IE_Released, this, &AALSBaseCharacter::AttackReleasedAction);
 	//PlayerInputComponent->BindAction("JumpAction", IE_Pressed, this, &AALSBaseCharacter::JumpPressedAction);
@@ -642,9 +642,10 @@ bool AALSBaseCharacter::CanSprint() const
 		return false;
 	}
 
+	// Tim [probably not needed now]
 	// Input sometimes seems to think it is below MovementInputAmount > 0.9f, causes jitter on clients when slowed.
 	// Lowering threshold to stop jitter.
-	const bool bValidInputAmount = MovementInputAmount > 0.6f;
+	const bool bValidInputAmount = MovementInputAmount > 0.9f;
 
 	if (RotationMode == EALSRotationMode::VelocityDirection)
 	{
@@ -1137,6 +1138,8 @@ void AALSBaseCharacter::UpdateCharacterMovement()
 	// Tim Commented as using GSCharacterMovementComponent.
 	// Ultimately this only sets maximum movement speeds, GAS system now does this.
 	// Update the Character Max Walk Speed to the configured speeds based on the currently Allowed Gait.
+	// Actually using ALS movement and not GAS.
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("Test:")));
 	MyCharacterMovementComponent->SetAllowedGait(AllowedGait);
 }
 
@@ -1291,7 +1294,7 @@ EALSGait AALSBaseCharacter::GetAllowedGait() const
 			if (DesiredGait == EALSGait::Sprinting)
 			{
 				//UE_LOG(LogTemp, Warning, TEXT("CanSprint() %f"), float(CanSprint()));
-				return CanSprint() ? EALSGait::Sprinting : EALSGait::Running;
+				return CanSprint() ? EALSGait::Sprinting : GetStoredGait(); //  EALSGait::Running;
 			}
 			return DesiredGait;
 		}
@@ -1389,8 +1392,8 @@ void AALSBaseCharacter::LimitRotation(float AimYawMin, float AimYawMax, float In
 void AALSBaseCharacter::GetControlForwardRightVector(FVector& Forward, FVector& Right) const
 {
 	const FRotator ControlRot(0.0f, AimingRotation.Yaw, 0.0f);
-	Forward = GetInputAxisValue("MoveForward/Backwards") * UKismetMathLibrary::GetForwardVector(ControlRot);
-	Right = GetInputAxisValue("MoveRight/Left") * UKismetMathLibrary::GetRightVector(ControlRot);
+	Forward = GetInputAxisValue("MoveForward") * UKismetMathLibrary::GetForwardVector(ControlRot); // MoveForward/Backwards
+	Right = GetInputAxisValue("MoveRight") * UKismetMathLibrary::GetRightVector(ControlRot); // MoveRight/Left
 }
 
 void AALSBaseCharacter::SetAttackingTimer(float Time)
@@ -1406,8 +1409,11 @@ FVector AALSBaseCharacter::GetPlayerMovementInput() const
 	return (Forward + Right).GetSafeNormal();
 }
 
-void AALSBaseCharacter::PlayerForwardMovementInput(float Value)
-{
+// Tim Moved Inputs to AGSHeroCharacter. Would prefer to have left inputs here but
+// inputs use some project specific functions [IsAlive()] so cannot be in plugin.
+
+//void AALSBaseCharacter::PlayerForwardMovementInput(float Value)
+//{
 	// Tim moved to GSHeroCharacter.cpp
 	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
 	//{
@@ -1416,10 +1422,10 @@ void AALSBaseCharacter::PlayerForwardMovementInput(float Value)
 	//	const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
 	//	AddMovementInput(UKismetMathLibrary::GetForwardVector(DirRotator), Scale);
 	//}
-}
+//}
 
-void AALSBaseCharacter::PlayerRightMovementInput(float Value)
-{
+//void AALSBaseCharacter::PlayerRightMovementInput(float Value)
+//{
 	// Tim moved to GSHeroCharacter.cpp
 	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::InAir)
 	//{
@@ -1429,16 +1435,16 @@ void AALSBaseCharacter::PlayerRightMovementInput(float Value)
 	//	const FRotator DirRotator(0.0f, AimingRotation.Yaw, 0.0f);
 	//	AddMovementInput(UKismetMathLibrary::GetRightVector(DirRotator), Scale);
 	//}
-}
+//}
 
-void AALSBaseCharacter::PlayerCameraUpInput(float Value)
-{
+//void AALSBaseCharacter::PlayerCameraUpInput(float Value)
+//{
 	// Tim No need for pitch input.
 	//AddControllerPitchInput(LookUpDownRate * Value);
-}
+//}
 
-void AALSBaseCharacter::PlayerCameraRightInput(float Value)
-{
+//void AALSBaseCharacter::PlayerCameraRightInput(float Value)
+//{
 	// Tim moved to GSHeroCharacter.cpp
 	// Tim only allowing input if we are not mantling. Better location to put this? Seems extreme to ignore all input.
 	//if (MovementState == EALSMovementState::Grounded || MovementState == EALSMovementState::None)
@@ -1450,7 +1456,7 @@ void AALSBaseCharacter::PlayerCameraRightInput(float Value)
 	//		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, TEXT("PlayerCameraRightInput"));
 	//	}
 	//}
-}
+//}
 
 void AALSBaseCharacter::AttackPressedAction()
 {

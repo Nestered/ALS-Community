@@ -32,12 +32,23 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 		virtual void SetMoveFor(ACharacter* Character, float InDeltaTime, FVector const& NewAccel,
 		                        class FNetworkPredictionData_Client_Character& ClientData) override;
 		virtual void PrepMoveFor(class ACharacter* Character) override;
+		virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character, float MaxDelta) const override;
 		
 		// Walk Speed Update
 		uint8 bSavedRequestMovementSettingsChange : 1;
 		EALSGait SavedAllowedGait = EALSGait::Walking;
+
+		// Tim Stamina update.
+		float SavedStamina;
+		uint8 bSavedWantsStaminaChange : 1;
 	};
 
+	//class FCharacterNetworkMoveData_My : public FCharacterNetworkMoveData
+	//{
+	//public:
+	//	
+	//};
+	
 	class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character
 	{
 	public:
@@ -86,6 +97,12 @@ class ALSV4_CPP_API UALSCharacterMovementComponent : public UCharacterMovementCo
 	UFUNCTION(Reliable, Server, Category = "Movement Settings")
 	void Server_SetAllowedGait(EALSGait NewAllowedGait);
 
-	UFUNCTION(Reliable, Client, Category = "Movement Settings")
-	void Client_SetAllowedGait();
+	UFUNCTION(Unreliable, Server, WithValidation)
+	void ServerSetStamina(const float& SendStamina);
+
+	///@brief Triggers stamina change.
+	void DoStaminaChange();
+
+	float Stamina;
+	uint8 bWantsStaminaChange : 1;
 };

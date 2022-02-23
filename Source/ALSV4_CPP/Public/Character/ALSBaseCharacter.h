@@ -245,13 +245,13 @@ public:
 	FALSMovementSettings GetTargetMovementSettings() const;
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Movement System")
-	EALSGait GetAllowedGait() const;
+	virtual EALSGait GetAllowedGait() const;
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Movement System")
 	EALSGait GetActualGait(EALSGait AllowedGait) const;
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Movement System")
-	bool CanSprint() const;
+	virtual bool CanSprint() const;
 
 	/** BP implementable function that called when Breakfall starts */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "ALS|Movement System")
@@ -394,7 +394,7 @@ protected:
 
 	void SetEssentialValues(float DeltaTime);
 
-	void UpdateCharacterMovement();
+	virtual void UpdateCharacterMovement();
 
 	void UpdateGroundedRotation(float DeltaTime);
 
@@ -412,13 +412,13 @@ protected:
 
 	/** Input */
 
-	void PlayerForwardMovementInput(float Value);
+	//void PlayerForwardMovementInput(float Value);
 
-	void PlayerRightMovementInput(float Value);
+	//void PlayerRightMovementInput(float Value);
 
-	void PlayerCameraUpInput(float Value);
+	//void PlayerCameraUpInput(float Value);
 
-	void PlayerCameraRightInput(float Value);
+	//void PlayerCameraRightInput(float Value);
 
 	void AttackPressedAction();
 
@@ -431,9 +431,9 @@ public:
 protected:
 	void JumpReleasedAction();
 
-	void SprintPressedAction();
+	virtual void SprintPressedAction();
 
-	void SprintReleasedAction();
+	virtual void SprintReleasedAction();
 
 	void AimPressedAction();
 
