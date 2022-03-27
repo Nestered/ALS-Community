@@ -112,6 +112,9 @@ public:
 	UFUNCTION(BlueprintGetter, Category = "ALS|CharacterStates")
 	EALSGait GetDesiredGait() const { return DesiredGait; }
 
+	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "ALS|Character States")
+	void Server_SetStoredGait(EALSGait NewGait);
+	
 	UFUNCTION(BlueprintCallable, Category = "ALS|Character States")
 	void SetRotationMode(EALSRotationMode NewRotationMode);
 
@@ -591,9 +594,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "ALS|State Values")
 	EALSGait Gait = EALSGait::Walking;
 
-	UPROPERTY(BlueprintReadOnly, Category = "ALS|State Values")
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "ALS|State Values")
 	EALSGait StoredGait = EALSGait::Walking;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ALS|State Values")
 	EALSStance Stance = EALSStance::Standing;
 

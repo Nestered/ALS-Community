@@ -85,6 +85,7 @@ void AALSBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION(AALSBaseCharacter, ReplicatedControlRotation, COND_SkipOwner);
 
 	DOREPLIFETIME(AALSBaseCharacter, DesiredGait);
+	DOREPLIFETIME(AALSBaseCharacter, StoredGait);
 	DOREPLIFETIME_CONDITION(AALSBaseCharacter, DesiredStance, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AALSBaseCharacter, DesiredRotationMode, COND_SkipOwner);
 
@@ -198,6 +199,17 @@ void AALSBaseCharacter::SetAimYawRate(float NewAimYawRate)
 void AALSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, .01f, FColor::Green, FString::Printf(TEXT("Authority: StoredGait : %f"), float(GetStoredGait())));
+		//UE_LOG(LogTemp, Error, TEXT("Authority: AllowedGait %f UpdateMaxWalkSpeed %f"), float(AllowedGait), float(UpdateMaxWalkSpeed));
+	}
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, .01f, FColor::Green, FString::Printf(TEXT("Client: StoredGait : %f"), float(GetStoredGait())));
+		//UE_LOG(LogTemp, Error, TEXT("Client: AllowedGait %f UpdateMaxWalkSpeed %f"), float(AllowedGait), float(UpdateMaxWalkSpeed));
+	}
 	
 	// Set required values
 	SetEssentialValues(DeltaTime);
@@ -386,12 +398,14 @@ void AALSBaseCharacter::SetDesiredGait(const EALSGait NewGait)
 	DesiredGait = NewGait;
 	if (GetLocalRole() == ROLE_AutonomousProxy)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("AALSBaseCharacter::SetDesiredGait AutonomousProxy"));
 		Server_SetDesiredGait(NewGait);
 	}
 }
 
 void AALSBaseCharacter::Server_SetDesiredGait_Implementation(EALSGait NewGait)
 {
+	UE_LOG(LogTemp, Warning, TEXT("AALSBaseCharacter::Server_SetDesiredGait ServerSetDesiredGait"));
 	SetDesiredGait(NewGait);
 }
 
@@ -1536,15 +1550,16 @@ void AALSBaseCharacter::JumpReleasedAction()
 void AALSBaseCharacter::SprintPressedAction()
 {
 	// Store gait for coming out of sprinting.
-	SetStoredGait(Gait);
+	//SetStoredGait(Gait);
+	Server_SetStoredGait(Gait);
 	SetDesiredGait(EALSGait::Sprinting);
-	//UE_LOG(LogTemp, Warning, TEXT("SprintPressedAction()"));
+	UE_LOG(LogTemp, Log, TEXT("SprintPressedAction()"));
 }
 
 void AALSBaseCharacter::SprintReleasedAction()
 {
 	SetDesiredGait(GetStoredGait());
-	//UE_LOG(LogTemp, Warning, TEXT("SprintReleasedAction()"));
+	UE_LOG(LogTemp, Log, TEXT("SprintReleasedAction()"));
 }
 
 void AALSBaseCharacter::AimPressedAction()
@@ -1742,6 +1757,16 @@ void AALSBaseCharacter::OnRep_OverlayState(EALSOverlayState PrevOverlayState)
 void AALSBaseCharacter::OnRep_VisibleMesh(USkeletalMesh* NewVisibleMesh)
 {
 	OnVisibleMeshChanged(NewVisibleMesh);
+}
+
+void AALSBaseCharacter::Server_SetStoredGait_Implementation(EALSGait NewGait)
+{
+	StoredGait = NewGait;
+	if (GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROLE_AutonomousProxy SetStoredGait"));
+		Server_SetStoredGait(NewGait);
+	}
 }
 
 void AALSBaseCharacter::CallBlueprintDebugPrint_Implementation(FVector Vector)
